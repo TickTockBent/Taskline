@@ -1,0 +1,50 @@
+[package]
+name = "taskline"
+version = "0.1.0"
+edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+description = "Lightweight Task Scheduling for Rust"
+license = "MIT"
+repository = "https://github.com/yourusername/taskline"
+keywords = ["cron", "scheduler", "async", "task", "tokio"]
+categories = ["asynchronous", "date-and-time"]
+readme = "README.md"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.35.1", features = ["full"] }
+
+# Cron expression parsing
+cron = "0.12.0"
+
+# Date and time handling
+chrono = { version = "0.4.34", features = ["serde"] }
+
+# Logging
+log = "0.4.20"
+env_logger = "0.11.1"
+tracing = { version = "0.1.40", optional = true }
+tracing-subscriber = { version = "0.3.18", optional = true }
+
+# Error handling
+thiserror = "1.0.56"
+
+# Utilities
+uuid = { version = "1.7.0", features = ["v4", "serde"] }
+
+[features]
+default = ["basic-logging"]
+basic-logging = ["env_logger"]
+tracing-integration = ["tracing", "tracing-subscriber"]
+
+[dev-dependencies]
+tokio-test = "0.4.3"
+tempfile = "3.9.0"
+
+[[example]]
+name = "basic_scheduler"
+path = "examples/basic_scheduler.rs"
+
+[[example]]
+name = "advanced_usage"
+path = "examples/advanced_usage.rs"
