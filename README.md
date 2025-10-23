@@ -224,6 +224,25 @@ Examples:
 - `0 12 * * MON-FRI` - Weekdays at noon
 - `*/15 * * * *` - Every 15 minutes
 
+## Real-World Examples
+
+Taskline includes comprehensive real-world examples demonstrating production patterns:
+
+- **[Web Integration](examples/web_integration_axum.rs)** - Axum web framework integration with background tasks
+- **[Monitoring & Alerting](examples/monitoring_alerting.rs)** - System monitoring with threshold-based alerts
+- **[Database Maintenance](examples/database_maintenance.rs)** - Automated backups, optimization, and cleanup
+- **[API Polling](examples/api_polling_scraping.rs)** - Rate-limited API polling and web scraping
+- **[Notifications](examples/notification_system.rs)** - Email campaigns, reminders, and multi-channel messaging
+- **[Cache Warming](examples/cache_warming.rs)** - Proactive cache management and optimization
+
+See [EXAMPLES.md](EXAMPLES.md) for detailed documentation of all examples.
+
+Run any example with:
+```bash
+cargo run --example web_integration_axum
+cargo run --example monitoring_alerting
+```
+
 ## Recent Enhancements (v0.1.1)
 
 - ✅ Interval-based scheduling with `Task::with_interval(Duration)`

@@ -56,6 +56,30 @@ path = "examples/advanced_usage.rs"
 name = "enhanced_features"
 path = "examples/enhanced_features.rs"
 
+[[example]]
+name = "web_integration_axum"
+path = "examples/web_integration_axum.rs"
+
+[[example]]
+name = "monitoring_alerting"
+path = "examples/monitoring_alerting.rs"
+
+[[example]]
+name = "database_maintenance"
+path = "examples/database_maintenance.rs"
+
+[[example]]
+name = "api_polling_scraping"
+path = "examples/api_polling_scraping.rs"
+
+[[example]]
+name = "notification_system"
+path = "examples/notification_system.rs"
+
+[[example]]
+name = "cache_warming"
+path = "examples/cache_warming.rs"
+
 [[bench]]
 name = "scheduler_benchmarks"
 harness = false
