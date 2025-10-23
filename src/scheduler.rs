@@ -15,6 +15,7 @@ use tokio::time::{self, Instant};
 use crate::cron_parser::CronSchedule;
 use crate::errors::TasklineError;
 use crate::task::{Task, TaskStatus};
+use crate::events::{EventBus, SchedulerEvent};
 use crate::Result;
 
 /// Configuration options for the scheduler.
@@ -124,6 +125,8 @@ pub struct Scheduler {
     running: Arc<Mutex<bool>>,
     /// The time the scheduler was started
     start_time: Arc<Mutex<Option<DateTime<Utc>>>>,
+    /// Event bus for publishing scheduler and task events
+    event_bus: EventBus,
 }
 
 impl Scheduler {
@@ -173,7 +176,29 @@ impl Scheduler {
             scheduler_handle: Arc::new(Mutex::new(None)),
             running: Arc::new(Mutex::new(false)),
             start_time: Arc::new(Mutex::new(None)),
+            event_bus: EventBus::new(),
         }
+    }
+
+    /// Returns a reference to the event bus.
+    ///
+    /// Use this to subscribe to scheduler and task events.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use taskline::Scheduler;
+    ///
+    /// let scheduler = Scheduler::new();
+    /// let mut receiver = scheduler.event_bus().subscribe();
+    ///
+    /// // In an async context:
+    /// // while let Ok(event) = receiver.recv().await {
+    /// //     println!("Event: {:?}", event);
+    /// // }
+    /// ```
+    pub fn event_bus(&self) -> &EventBus {
+        &self.event_bus
     }
 
 
@@ -212,31 +237,59 @@ impl Scheduler {
     pub fn add(&self, cron_expr: &str, task: Task) -> Result<String> {
         let task = task.with_schedule(cron_expr)?;
         let task_id = task.id().to_string();
-        
+        let task_name = task.name().to_string();
+
+        let task_arc = Arc::new(task);
         let mut tasks = self.tasks.blocking_lock();
-        tasks.insert(task_id.clone(), Arc::new(task));
-        
+        tasks.insert(task_id.clone(), task_arc);
+
         debug!("Added task '{}' with schedule '{}'", task_id, cron_expr);
+
+        // Publish event
+        self.event_bus.publish(SchedulerEvent::TaskAdded {
+            task_id: task_id.clone(),
+            task_name,
+            timestamp: Utc::now(),
+        });
+
         Ok(task_id)
     }
     
     /// Add a pre-configured task to the scheduler
     pub fn add_task(&self, task: Task) -> Result<String> {
         let task_id = task.id().to_string();
+        let task_name = task.name().to_string();
         let task_arc = Arc::new(task);
-        
+
         let mut tasks = self.tasks.blocking_lock();
         tasks.insert(task_id.clone(), task_arc);
-        
+
         debug!("Added task '{}'", task_id);
+
+        // Publish event
+        self.event_bus.publish(SchedulerEvent::TaskAdded {
+            task_id: task_id.clone(),
+            task_name,
+            timestamp: Utc::now(),
+        });
+
         Ok(task_id)
     }
-    
+
     /// Remove a task from the scheduler
     pub fn remove(&self, task_id: &str) -> Result<()> {
         let mut tasks = self.tasks.blocking_lock();
-        if tasks.remove(task_id).is_some() {
+        if let Some(task) = tasks.remove(task_id) {
+            let task_name = task.name().to_string();
             debug!("Removed task '{}'", task_id);
+
+            // Publish event
+            self.event_bus.publish(SchedulerEvent::TaskRemoved {
+                task_id: task_id.to_string(),
+                task_name,
+                timestamp: Utc::now(),
+            });
+
             Ok(())
         } else {
             Err(TasklineError::SchedulerError(format!(
@@ -253,6 +306,82 @@ impl Scheduler {
     /// Get a list of all task IDs
     pub async fn task_ids(&self) -> Vec<String> {
         self.tasks.lock().await.keys().cloned().collect()
+    }
+
+    /// Get all tasks with a specific tag.
+    ///
+    /// # Arguments
+    ///
+    /// * `tag` - The tag to filter by
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use taskline::{Scheduler, Task};
+    /// # async fn example() {
+    /// let scheduler = Scheduler::new();
+    ///
+    /// let tasks = scheduler.tasks_with_tag("backup").await;
+    /// println!("Found {} backup tasks", tasks.len());
+    /// # }
+    /// ```
+    pub async fn tasks_with_tag(&self, tag: &str) -> Vec<Arc<Task>> {
+        let tasks = self.tasks.lock().await;
+        tasks
+            .values()
+            .filter(|task| task.has_tag(tag))
+            .cloned()
+            .collect()
+    }
+
+    /// Get all tasks with any of the specified tags.
+    ///
+    /// # Arguments
+    ///
+    /// * `tags` - A slice of tags to filter by
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use taskline::{Scheduler, Task};
+    /// # async fn example() {
+    /// let scheduler = Scheduler::new();
+    ///
+    /// let tasks = scheduler.tasks_with_any_tag(&["backup", "critical"]).await;
+    /// # }
+    /// ```
+    pub async fn tasks_with_any_tag(&self, tags: &[&str]) -> Vec<Arc<Task>> {
+        let tasks = self.tasks.lock().await;
+        tasks
+            .values()
+            .filter(|task| tags.iter().any(|tag| task.has_tag(tag)))
+            .cloned()
+            .collect()
+    }
+
+    /// Get all tasks with all of the specified tags.
+    ///
+    /// # Arguments
+    ///
+    /// * `tags` - A slice of tags to filter by
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use taskline::{Scheduler, Task};
+    /// # async fn example() {
+    /// let scheduler = Scheduler::new();
+    ///
+    /// let tasks = scheduler.tasks_with_all_tags(&["backup", "database"]).await;
+    /// # }
+    /// ```
+    pub async fn tasks_with_all_tags(&self, tags: &[&str]) -> Vec<Arc<Task>> {
+        let tasks = self.tasks.lock().await;
+        tasks
+            .values()
+            .filter(|task| tags.iter().all(|tag| task.has_tag(tag)))
+            .cloned()
+            .collect()
     }
 
 
@@ -293,21 +422,28 @@ impl Scheduler {
         
         // Mark as running and record start time
         *running = true;
-        *self.start_time.lock().await = Some(Utc::now());
-        
+        let start_timestamp = Utc::now();
+        *self.start_time.lock().await = Some(start_timestamp);
+
+        // Publish event
+        self.event_bus.publish(SchedulerEvent::SchedulerStarted {
+            timestamp: start_timestamp,
+        });
+
         // Clone what we need for the background task
         let tasks = Arc::clone(&self.tasks);
         let config = self.config.clone();
         let running_arc = Arc::clone(&self.running);
-        
+        let event_bus = self.event_bus.clone();
+
         // Spawn the background scheduler task
         let handle = tokio::spawn(async move {
-            Self::scheduler_loop(tasks, config, running_arc).await;
+            Self::scheduler_loop(tasks, config, running_arc, event_bus).await;
         });
-        
+
         // Store the handle
         *self.scheduler_handle.lock().await = Some(handle);
-        
+
         info!("Scheduler started with check interval of {:?}", self.config.check_interval);
         Ok(())
     }
@@ -364,16 +500,23 @@ impl Scheduler {
                 "Scheduler is not running".to_string()
             ));
         }
-        
+
+        // Calculate uptime
+        let uptime_seconds = if let Some(start_time) = *self.start_time.lock().await {
+            Utc::now().signed_duration_since(start_time).num_seconds()
+        } else {
+            0
+        };
+
         // Mark as not running
         *running = false;
-        
+
         // Get the handle
         let handle = {
             let mut handle_lock = self.scheduler_handle.lock().await;
             handle_lock.take()
         };
-        
+
         // Wait for the scheduler to complete with timeout
         if let Some(handle) = handle {
             match tokio::time::timeout(self.config.shutdown_grace_period, handle).await {
@@ -387,7 +530,13 @@ impl Scheduler {
                 }
             }
         }
-        
+
+        // Publish event
+        self.event_bus.publish(SchedulerEvent::SchedulerStopped {
+            timestamp: Utc::now(),
+            uptime_seconds,
+        });
+
         info!("Scheduler stopped");
         Ok(())
     }
@@ -396,30 +545,32 @@ impl Scheduler {
     async fn scheduler_loop(
         tasks: Arc<Mutex<HashMap<String, Arc<Task>>>>,
         config: SchedulerConfig,
-        running: Arc<Mutex<bool>>
+        running: Arc<Mutex<bool>>,
+        event_bus: EventBus,
     ) {
         // Interval for periodic checking
         let mut interval = time::interval_at(
-            Instant::now(), 
+            Instant::now(),
             config.check_interval
         );
-        
+
         // Keep running until stopped
         while *running.lock().await {
             trace!("Scheduler tick - checking for due tasks");
             interval.tick().await;
-            
+
             // Find and execute due tasks
-            Self::execute_due_tasks(&tasks, &config).await;
+            Self::execute_due_tasks(&tasks, &config, &event_bus).await;
         }
-        
+
         info!("Scheduler loop terminated");
     }
-    
+
     /// Check for and execute tasks that are due to run
     async fn execute_due_tasks(
         tasks: &Arc<Mutex<HashMap<String, Arc<Task>>>>,
-        config: &SchedulerConfig
+        config: &SchedulerConfig,
+        event_bus: &EventBus,
     ) {
         let now = Utc::now();
         let task_ids: Vec<(String, Arc<Task>)> = {

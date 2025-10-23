@@ -18,6 +18,15 @@ use crate::errors::TasklineError;
 use crate::cron_parser::CronSchedule;
 use crate::Result;
 
+/// Represents different scheduling types for tasks.
+#[derive(Debug, Clone)]
+pub enum ScheduleType {
+    /// Cron-based scheduling using cron expressions
+    Cron(CronSchedule),
+    /// Interval-based scheduling using a fixed duration
+    Interval(Duration),
+}
+
 /// Represents the current execution status of a task.
 ///
 /// Tasks transition through various states during their lifecycle:
@@ -223,8 +232,10 @@ pub struct Task {
     id: String,
     /// Display name for the task
     name: String,
-    /// The cron schedule for this task (if scheduled)
-    schedule: Option<CronSchedule>,
+    /// The schedule for this task (cron or interval)
+    schedule: Option<ScheduleType>,
+    /// Tags for grouping and filtering tasks
+    tags: Vec<String>,
     /// The function to execute
     function: TaskFn,
     /// Configuration for execution
@@ -233,6 +244,8 @@ pub struct Task {
     status: Arc<Mutex<TaskStatus>>,
     /// Statistics about execution
     stats: Arc<Mutex<TaskStats>>,
+    /// Handle for cancellation support
+    cancellation_token: Arc<Mutex<Option<tokio_util::sync::CancellationToken>>>,
 }
 
 impl Task {
@@ -271,15 +284,17 @@ impl Task {
         Fut: Future<Output = Result<()>> + Send + 'static,
     {
         let task_id = Uuid::new_v4().to_string();
-        
+
         Task {
             id: task_id.clone(),
             name: format!("task_{}", task_id[..8].to_string()),
             schedule: None,
+            tags: Vec::new(),
             function: Box::new(move || Box::pin(func())),
             config: TaskConfig::default(),
             status: Arc::new(Mutex::new(TaskStatus::Idle)),
             stats: Arc::new(Mutex::new(TaskStats::default())),
+            cancellation_token: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -367,8 +382,165 @@ impl Task {
     ///
     /// Returns [`TasklineError::CronParseError`] if the cron expression is invalid.
     pub fn with_schedule(mut self, cron_expr: &str) -> Result<Self> {
-        self.schedule = Some(CronSchedule::new(cron_expr)?);
+        let cron_schedule = CronSchedule::new(cron_expr)?;
+
+        // Auto-generate a meaningful name if using default name
+        if self.name.starts_with("task_") {
+            self.name = Self::generate_name_from_cron(cron_expr);
+        }
+
+        self.schedule = Some(ScheduleType::Cron(cron_schedule));
         Ok(self)
+    }
+
+    /// Sets an interval-based schedule for the task (builder pattern).
+    ///
+    /// The task will be executed repeatedly at the specified interval.
+    ///
+    /// # Arguments
+    ///
+    /// * `interval` - The duration between executions
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use taskline::Task;
+    /// use std::time::Duration;
+    ///
+    /// let task = Task::new(|| async { Ok(()) })
+    ///     .with_interval(Duration::from_secs(300)); // Every 5 minutes
+    /// ```
+    pub fn with_interval(mut self, interval: Duration) -> Self {
+        // Auto-generate a meaningful name if using default name
+        if self.name.starts_with("task_") {
+            self.name = Self::generate_name_from_interval(interval);
+        }
+
+        self.schedule = Some(ScheduleType::Interval(interval));
+        self
+    }
+
+    /// Adds tags to the task for grouping and filtering (builder pattern).
+    ///
+    /// # Arguments
+    ///
+    /// * `tags` - A slice of strings to use as tags
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use taskline::Task;
+    ///
+    /// let task = Task::new(|| async { Ok(()) })
+    ///     .with_tags(&["backup", "database", "nightly"]);
+    /// ```
+    pub fn with_tags(mut self, tags: &[impl ToString]) -> Self {
+        self.tags = tags.iter().map(|t| t.to_string()).collect();
+        self
+    }
+
+    /// Adds a single tag to the task (builder pattern).
+    ///
+    /// # Arguments
+    ///
+    /// * `tag` - A string to use as a tag
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use taskline::Task;
+    ///
+    /// let task = Task::new(|| async { Ok(()) })
+    ///     .with_tag("backup");
+    /// ```
+    pub fn with_tag(mut self, tag: impl ToString) -> Self {
+        self.tags.push(tag.to_string());
+        self
+    }
+
+    /// Returns a reference to the task's tags.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use taskline::Task;
+    ///
+    /// let task = Task::new(|| async { Ok(()) })
+    ///     .with_tags(&["backup", "database"]);
+    ///
+    /// assert_eq!(task.tags(), &["backup", "database"]);
+    /// ```
+    pub fn tags(&self) -> &[String] {
+        &self.tags
+    }
+
+    /// Checks if the task has a specific tag.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use taskline::Task;
+    ///
+    /// let task = Task::new(|| async { Ok(()) })
+    ///     .with_tag("backup");
+    ///
+    /// assert!(task.has_tag("backup"));
+    /// assert!(!task.has_tag("restore"));
+    /// ```
+    pub fn has_tag(&self, tag: &str) -> bool {
+        self.tags.iter().any(|t| t == tag)
+    }
+
+    /// Generates a meaningful name from a cron expression.
+    fn generate_name_from_cron(cron_expr: &str) -> String {
+        // Parse common cron patterns and generate descriptive names
+        match cron_expr {
+            "* * * * *" => "Every Minute".to_string(),
+            "0 * * * *" => "Hourly".to_string(),
+            "0 0 * * *" => "Daily at Midnight".to_string(),
+            "0 12 * * *" => "Daily at Noon".to_string(),
+            "0 0 * * 0" => "Weekly on Sunday".to_string(),
+            "0 0 * * 1" => "Weekly on Monday".to_string(),
+            "0 0 1 * *" => "Monthly on First Day".to_string(),
+            expr if expr.starts_with("*/") => {
+                if let Some(mins) = expr.strip_prefix("*/").and_then(|s| s.split_whitespace().next()) {
+                    if let Ok(n) = mins.parse::<u32>() {
+                        return format!("Every {} Minutes", n);
+                    }
+                }
+                format!("Interval Task ({})", expr)
+            },
+            expr if expr.starts_with("0 */") => {
+                let parts: Vec<&str> = expr.split_whitespace().collect();
+                if parts.len() >= 2 {
+                    if let Some(hours) = parts[1].strip_prefix("*/") {
+                        if let Ok(n) = hours.parse::<u32>() {
+                            return format!("Every {} Hours", n);
+                        }
+                    }
+                }
+                format!("Scheduled Task ({})", expr)
+            },
+            _ => format!("Scheduled Task ({})", cron_expr),
+        }
+    }
+
+    /// Generates a meaningful name from an interval duration.
+    fn generate_name_from_interval(interval: Duration) -> String {
+        let secs = interval.as_secs();
+
+        if secs < 60 {
+            format!("Every {} Seconds", secs)
+        } else if secs < 3600 {
+            let mins = secs / 60;
+            format!("Every {} Minutes", mins)
+        } else if secs < 86400 {
+            let hours = secs / 3600;
+            format!("Every {} Hours", hours)
+        } else {
+            let days = secs / 86400;
+            format!("Every {} Days", days)
+        }
     }
 
     /// Returns the current status of the task.
@@ -413,7 +585,21 @@ impl Task {
     pub async fn update_next_execution(&self) {
         if let Some(schedule) = &self.schedule {
             let mut stats = self.stats.lock().await;
-            stats.next_execution = schedule.next_execution(Utc::now());
+            let now = Utc::now();
+
+            stats.next_execution = match schedule {
+                ScheduleType::Cron(cron_schedule) => cron_schedule.next_execution(now),
+                ScheduleType::Interval(interval) => {
+                    // For interval-based schedules, add the interval to the last execution time
+                    // or use now if there's no last execution
+                    if let Some(last_exec) = stats.last_execution {
+                        Some(last_exec + chrono::Duration::from_std(*interval).unwrap_or(chrono::Duration::seconds(0)))
+                    } else {
+                        // First execution - schedule it for now
+                        Some(now)
+                    }
+                }
+            };
         }
     }
 
@@ -520,21 +706,122 @@ impl Task {
         result
     }
     
-    /// Execute the task once with timeout handling
+    /// Execute the task once with timeout handling, cancellation support, and timeout warnings
     async fn execute_once(&self) -> Result<()> {
         let func = &self.function;
-        
+
+        // Create a new cancellation token for this execution
+        let cancel_token = tokio_util::sync::CancellationToken::new();
+        {
+            let mut token_guard = self.cancellation_token.lock().await;
+            *token_guard = Some(cancel_token.clone());
+        }
+
         // Execute with timeout if configured
-        match self.config.timeout {
+        let result = match self.config.timeout {
             Some(timeout_duration) => {
-                match timeout(timeout_duration, func()).await {
-                    Ok(result) => result,
-                    Err(_) => Err(TasklineError::TaskTimeout(format!(
-                        "Task '{}' timed out after {:?}", self.name, timeout_duration
-                    ))),
+                // Create a warning task that fires at 80% of timeout
+                let warning_duration = Duration::from_nanos((timeout_duration.as_nanos() as f64 * 0.8) as u64);
+                let task_name = self.name.clone();
+                let cancel_for_warning = cancel_token.clone();
+
+                // Spawn warning task
+                let warning_handle = tokio::spawn(async move {
+                    tokio::select! {
+                        _ = tokio::time::sleep(warning_duration) => {
+                            warn!("Task '{}' is approaching timeout ({}% complete)",
+                                task_name, 80);
+                        }
+                        _ = cancel_for_warning.cancelled() => {
+                            // Task completed before warning threshold
+                        }
+                    }
+                });
+
+                // Execute the function with cancellation support
+                let task_future = func();
+                let cancel_for_exec = cancel_token.clone();
+
+                let execution_result = tokio::select! {
+                    result = task_future => Some(result),
+                    _ = cancel_for_exec.cancelled() => {
+                        debug!("Task '{}' was cancelled during execution", self.name);
+                        None
+                    }
+                    _ = tokio::time::sleep(timeout_duration) => {
+                        // Timeout occurred
+                        None
+                    }
+                };
+
+                // Cancel the warning task if still running
+                cancel_token.cancel();
+                let _ = warning_handle.await;
+
+                match execution_result {
+                    Some(result) => result,
+                    None => {
+                        if cancel_for_exec.is_cancelled() {
+                            Err(TasklineError::TaskExecutionError(
+                                format!("Task '{}' was cancelled", self.name)
+                            ))
+                        } else {
+                            Err(TasklineError::TaskTimeout(format!(
+                                "Task '{}' timed out after {:?}", self.name, timeout_duration
+                            )))
+                        }
+                    }
                 }
             },
-            None => func().await,
+            None => {
+                // No timeout - still support cancellation
+                let task_future = func();
+                let cancel_for_exec = cancel_token.clone();
+
+                let result = tokio::select! {
+                    result = task_future => Some(result),
+                    _ = cancel_for_exec.cancelled() => None,
+                };
+
+                match result {
+                    Some(r) => r,
+                    None => Err(TasklineError::TaskExecutionError(
+                        format!("Task '{}' was cancelled", self.name)
+                    )),
+                }
+            },
+        };
+
+        // Clear the cancellation token
+        {
+            let mut token_guard = self.cancellation_token.lock().await;
+            *token_guard = None;
+        }
+
+        result
+    }
+
+    /// Cancels a currently running task.
+    ///
+    /// If the task is running, this will signal it to cancel gracefully.
+    /// The task must be checking for cancellation to actually stop.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use taskline::Task;
+    /// # async fn example() {
+    /// let task = Task::new(|| async { Ok(()) });
+    /// // Start task execution in background
+    /// // ...
+    /// task.cancel().await;
+    /// # }
+    /// ```
+    pub async fn cancel(&self) {
+        let token_guard = self.cancellation_token.lock().await;
+        if let Some(token) = token_guard.as_ref() {
+            info!("Cancelling task '{}'", self.name);
+            token.cancel();
         }
     }
 
@@ -618,8 +905,27 @@ impl fmt::Debug for Task {
             .field("id", &self.id)
             .field("name", &self.name)
             .field("schedule", &self.schedule)
+            .field("tags", &self.tags)
             .field("config", &self.config)
             .finish()
+    }
+}
+
+impl Task {
+    /// Returns the task's name.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use taskline::Task;
+    ///
+    /// let task = Task::new(|| async { Ok(()) })
+    ///     .with_name("My Task");
+    ///
+    /// assert_eq!(task.name(), "My Task");
+    /// ```
+    pub fn name(&self) -> &str {
+        &self.name
     }
 }
 

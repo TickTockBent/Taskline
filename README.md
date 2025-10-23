@@ -21,7 +21,13 @@ Taskline addresses the common need among Rust developers for reliable task sched
 ## Core Features
 
 - **Cron-like Scheduling**: Intuitive scheduling using cron syntax (`0 0 * * *`)
+- **Interval-based Scheduling**: Simple interval-based task execution with `Task::with_interval()`
 - **Async-Await Native**: First-class async task support leveraging Tokio
+- **Task Tags/Labels**: Organize and filter tasks using tags
+- **Graceful Cancellation**: Cancel running tasks cleanly
+- **Timeout Warnings**: Get warned at 80% of timeout duration
+- **Event Bus**: Subscribe to scheduler and task lifecycle events
+- **Auto-generated Names**: Meaningful task names automatically generated from cron expressions
 - **Robust Logging**: Built-in logging integration (`log`, `env_logger`, or `tracing`)
 - **Fault-Tolerance & Retries**: Configurable error handling and automatic task retries
 - **Simple & Modular**: Easy to include and extend in existing Rust codebases
@@ -97,6 +103,87 @@ async fn main() {
 }
 ```
 
+## Enhanced Features
+
+### Interval-based Scheduling
+
+```rust
+// Create a task that runs every 5 minutes
+let task = Task::new(|| async {
+    println!("Running periodic task!");
+    Ok(())
+})
+.with_interval(Duration::from_secs(300));
+
+scheduler.add_task(task)?;
+```
+
+### Task Tags and Filtering
+
+```rust
+// Create tasks with tags
+let backup_task = Task::new(|| async { Ok(()) })
+    .with_tags(&["backup", "database", "critical"]);
+
+let monitoring_task = Task::new(|| async { Ok(()) })
+    .with_tag("monitoring");
+
+scheduler.add_task(backup_task)?;
+scheduler.add_task(monitoring_task)?;
+
+// Filter tasks by tags
+let critical_tasks = scheduler.tasks_with_tag("critical").await;
+let backup_or_monitoring = scheduler.tasks_with_any_tag(&["backup", "monitoring"]).await;
+let critical_backups = scheduler.tasks_with_all_tags(&["backup", "critical"]).await;
+```
+
+### Event Bus
+
+```rust
+// Subscribe to scheduler events
+let mut events = scheduler.event_bus().subscribe();
+
+tokio::spawn(async move {
+    while let Ok(event) = events.recv().await {
+        match event {
+            SchedulerEvent::TaskStarting { task_name, .. } => {
+                println!("Task starting: {}", task_name);
+            }
+            SchedulerEvent::TaskCompleted { task_name, duration_ms, .. } => {
+                println!("Task completed: {} ({}ms)", task_name, duration_ms);
+            }
+            SchedulerEvent::TaskTimeoutWarning { task_name, .. } => {
+                println!("Task approaching timeout: {}", task_name);
+            }
+            _ => {}
+        }
+    }
+});
+```
+
+### Task Cancellation
+
+```rust
+// Cancel a running task
+if let Some(task) = scheduler.get_task(&task_id).await {
+    task.cancel().await;
+}
+```
+
+### Auto-generated Task Names
+
+```rust
+// Task names are automatically generated from cron expressions
+let task = Task::new(|| async { Ok(()) })
+    .with_schedule("0 * * * *")?;  // Automatically named "Hourly"
+
+let task = Task::new(|| async { Ok(()) })
+    .with_schedule("*/5 * * * *")?;  // Automatically named "Every 5 Minutes"
+
+let task = Task::new(|| async { Ok(()) })
+    .with_interval(Duration::from_secs(300));  // Automatically named "Every 5 Minutes"
+```
+
 ## Task Management
 
 ```rust
@@ -108,15 +195,18 @@ if let Some(task) = scheduler.get_task(&task_id).await {
     // Get task statistics
     let stats = task.stats().await;
     println!("Task executions: {}", stats.executions);
-    
+
     // Manually execute a task
     task.execute().await.unwrap();
-    
+
     // Pause a task
     task.pause().await.unwrap();
-    
+
     // Resume a paused task
     task.resume().await.unwrap();
+
+    // Cancel a running task
+    task.cancel().await;
 }
 
 // Remove a task from the scheduler
@@ -134,11 +224,22 @@ Examples:
 - `0 12 * * MON-FRI` - Weekdays at noon
 - `*/15 * * * *` - Every 15 minutes
 
+## Recent Enhancements (v0.1.1)
+
+- ✅ Interval-based scheduling with `Task::with_interval(Duration)`
+- ✅ Task tags/labels for grouping and filtering
+- ✅ Graceful task cancellation
+- ✅ Task timeout warnings at 80% of timeout
+- ✅ Scheduler event bus for task/scheduler events
+- ✅ Auto-generated meaningful names from cron expressions
+
 ## Future Enhancements
 
 - Task persistence with databases (SQLite, Redis)
 - Interactive CLI for task management
 - Web dashboard integration
+- Task dependencies and workflows
+- Distributed task scheduling
 
 ## License
 

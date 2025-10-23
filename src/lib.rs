@@ -7,10 +7,16 @@
 //! ## Features
 //!
 //! - **Cron-like Scheduling**: Intuitive scheduling using standard cron syntax
+//! - **Interval-based Scheduling**: Simple interval-based task execution
 //! - **Async-Await Native**: First-class async task support leveraging Tokio
 //! - **Robust Error Handling**: Configurable retries and timeout handling
 //! - **Task Statistics**: Built-in execution tracking and metrics
 //! - **Pause/Resume**: Dynamic task control without stopping the scheduler
+//! - **Task Tags/Labels**: Organize and filter tasks using tags
+//! - **Graceful Cancellation**: Cancel running tasks cleanly
+//! - **Timeout Warnings**: Get warned at 80% of timeout duration
+//! - **Event Bus**: Subscribe to scheduler and task lifecycle events
+//! - **Auto-generated Names**: Meaningful task names from cron expressions
 //! - **Thread-Safe**: All components are safe to share across threads
 //!
 //! ## Quick Start
@@ -67,12 +73,21 @@
 //!         shutdown_grace_period: Duration::from_secs(10),
 //!     });
 //!
+//!     // Subscribe to events
+//!     let mut events = scheduler.event_bus().subscribe();
+//!     tokio::spawn(async move {
+//!         while let Ok(event) = events.recv().await {
+//!             println!("Event: {:?}", event);
+//!         }
+//!     });
+//!
 //!     // Add task with custom configuration
 //!     scheduler.add("*/5 * * * *", Task::new(|| async {
 //!         // Your task logic here
 //!         Ok(())
 //!     })
 //!     .with_name("Custom Task")
+//!     .with_tags(&["backup", "critical"])
 //!     .with_config(TaskConfig {
 //!         timeout: Some(Duration::from_secs(30)),
 //!         max_retries: 3,
@@ -80,7 +95,19 @@
 //!         fail_scheduler_on_error: false,
 //!     }))?;
 //!
+//!     // Add interval-based task
+//!     scheduler.add_task(Task::new(|| async {
+//!         println!("Running every 5 minutes!");
+//!         Ok(())
+//!     })
+//!     .with_interval(Duration::from_secs(300))
+//!     .with_tag("monitoring"))?;
+//!
 //!     scheduler.start().await?;
+//!
+//!     // Filter tasks by tag
+//!     let critical_tasks = scheduler.tasks_with_tag("critical").await;
+//!     println!("Found {} critical tasks", critical_tasks.len());
 //!
 //!     // Do other work...
 //!
@@ -109,13 +136,15 @@
 
 // Re-export the main components
 pub use crate::scheduler::{Scheduler, SchedulerConfig};
-pub use crate::task::{Task, TaskConfig, TaskStatus, TaskStats};
+pub use crate::task::{Task, TaskConfig, TaskStatus, TaskStats, ScheduleType};
 pub use crate::errors::TasklineError;
+pub use crate::events::{EventBus, SchedulerEvent};
 
 // Main modules
 pub mod scheduler;
 pub mod task;
 pub mod errors;
+pub mod events;
 mod cron_parser;
 
 /// Convenient result type alias for Taskline operations.
