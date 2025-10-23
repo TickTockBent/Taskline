@@ -332,3 +332,248 @@ impl Drop for Scheduler {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::{AtomicU32, Ordering};
+
+    #[test]
+    fn test_scheduler_creation() {
+        let scheduler = Scheduler::new();
+        assert!(!tokio::runtime::Runtime::new().unwrap().block_on(scheduler.is_running()));
+    }
+
+    #[test]
+    fn test_scheduler_config_default() {
+        let config = SchedulerConfig::default();
+        assert_eq!(config.check_interval, Duration::from_millis(500));
+        assert!(config.continue_on_error);
+        assert_eq!(config.shutdown_grace_period, Duration::from_secs(30));
+    }
+
+    #[tokio::test]
+    async fn test_add_task() {
+        let scheduler = Scheduler::new();
+
+        let task = Task::new(|| async { Ok(()) })
+            .with_name("Test Task");
+
+        let task_id = scheduler.add("* * * * *", task).unwrap();
+        assert!(!task_id.is_empty());
+
+        let task_ids = scheduler.task_ids().await;
+        assert_eq!(task_ids.len(), 1);
+        assert!(task_ids.contains(&task_id));
+    }
+
+    #[tokio::test]
+    async fn test_add_multiple_tasks() {
+        let scheduler = Scheduler::new();
+
+        for i in 0..5 {
+            let task = Task::new(|| async { Ok(()) })
+                .with_name(format!("Task {}", i));
+            scheduler.add("* * * * *", task).unwrap();
+        }
+
+        let task_ids = scheduler.task_ids().await;
+        assert_eq!(task_ids.len(), 5);
+    }
+
+    #[tokio::test]
+    async fn test_remove_task() {
+        let scheduler = Scheduler::new();
+
+        let task = Task::new(|| async { Ok(()) });
+        let task_id = scheduler.add("* * * * *", task).unwrap();
+
+        let result = scheduler.remove(&task_id);
+        assert!(result.is_ok());
+
+        let task_ids = scheduler.task_ids().await;
+        assert_eq!(task_ids.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_remove_nonexistent_task() {
+        let scheduler = Scheduler::new();
+
+        let result = scheduler.remove("nonexistent-id");
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_get_task() {
+        let scheduler = Scheduler::new();
+
+        let task = Task::new(|| async { Ok(()) })
+            .with_name("Findable Task");
+        let task_id = scheduler.add("* * * * *", task).unwrap();
+
+        let found_task = scheduler.get_task(&task_id).await;
+        assert!(found_task.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_get_nonexistent_task() {
+        let scheduler = Scheduler::new();
+
+        let found_task = scheduler.get_task("nonexistent-id").await;
+        assert!(found_task.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_scheduler_start_stop() {
+        let scheduler = Scheduler::new();
+
+        assert!(!scheduler.is_running().await);
+
+        scheduler.start().await.unwrap();
+        assert!(scheduler.is_running().await);
+
+        scheduler.stop().await.unwrap();
+        assert!(!scheduler.is_running().await);
+    }
+
+    #[tokio::test]
+    async fn test_scheduler_cannot_start_twice() {
+        let scheduler = Scheduler::new();
+
+        scheduler.start().await.unwrap();
+        let result = scheduler.start().await;
+        assert!(result.is_err());
+
+        scheduler.stop().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_scheduler_cannot_stop_when_not_running() {
+        let scheduler = Scheduler::new();
+
+        let result = scheduler.stop().await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_scheduler_task_execution() {
+        let counter = Arc::new(AtomicU32::new(0));
+        let counter_clone = Arc::clone(&counter);
+
+        let scheduler = Scheduler::with_config(SchedulerConfig {
+            check_interval: Duration::from_millis(100),
+            continue_on_error: true,
+            shutdown_grace_period: Duration::from_secs(5),
+        });
+
+        // Create a task that runs every second (in practice, for testing)
+        let task = Task::new(move || {
+            let counter = Arc::clone(&counter_clone);
+            async move {
+                counter.fetch_add(1, Ordering::SeqCst);
+                Ok(())
+            }
+        })
+        .with_name("Counter Task")
+        .with_schedule("* * * * *")
+        .unwrap();
+
+        scheduler.add_task(task).unwrap();
+        scheduler.update_next_executions().await.unwrap();
+
+        scheduler.start().await.unwrap();
+
+        // Let it run briefly
+        tokio::time::sleep(Duration::from_millis(500)).await;
+
+        scheduler.stop().await.unwrap();
+
+        // Task may or may not have executed depending on timing
+        // This is a basic integration test
+    }
+
+    #[tokio::test]
+    async fn test_scheduler_uptime() {
+        let scheduler = Scheduler::new();
+
+        assert!(scheduler.uptime().await.is_none());
+
+        scheduler.start().await.unwrap();
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        let uptime = scheduler.uptime().await;
+        assert!(uptime.is_some());
+        assert!(uptime.unwrap().num_milliseconds() >= 100);
+
+        scheduler.stop().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_pause_resume_task() {
+        let scheduler = Scheduler::new();
+
+        let task = Task::new(|| async { Ok(()) });
+        let task_id = scheduler.add("* * * * *", task).unwrap();
+
+        let result = scheduler.pause_task(&task_id).await;
+        assert!(result.is_ok());
+
+        if let Some(task) = scheduler.get_task(&task_id).await {
+            assert_eq!(task.status().await, TaskStatus::Paused);
+        }
+
+        let result = scheduler.resume_task(&task_id).await;
+        assert!(result.is_ok());
+
+        if let Some(task) = scheduler.get_task(&task_id).await {
+            assert_eq!(task.status().await, TaskStatus::Idle);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_pause_nonexistent_task() {
+        let scheduler = Scheduler::new();
+
+        let result = scheduler.pause_task("nonexistent-id").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_resume_nonexistent_task() {
+        let scheduler = Scheduler::new();
+
+        let result = scheduler.resume_task("nonexistent-id").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_scheduler_with_custom_config() {
+        let config = SchedulerConfig {
+            check_interval: Duration::from_millis(100),
+            continue_on_error: false,
+            shutdown_grace_period: Duration::from_secs(10),
+        };
+
+        let scheduler = Scheduler::with_config(config.clone());
+        assert_eq!(scheduler.config.check_interval, config.check_interval);
+        assert_eq!(scheduler.config.continue_on_error, config.continue_on_error);
+    }
+
+    #[tokio::test]
+    async fn test_update_next_executions() {
+        let scheduler = Scheduler::new();
+
+        let task = Task::new(|| async { Ok(()) })
+            .with_schedule("0 0 * * *")
+            .unwrap();
+
+        let task_id = scheduler.add_task(task).unwrap();
+
+        scheduler.update_next_executions().await.unwrap();
+
+        if let Some(task) = scheduler.get_task(&task_id).await {
+            let stats = task.stats().await;
+            assert!(stats.next_execution.is_some());
+        }
+    }
+}

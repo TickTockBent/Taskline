@@ -2,7 +2,11 @@
 
 Taskline is a minimalist yet powerful cron-style task scheduler built with Rust. Designed for simplicity, performance, and ease of integration, Taskline enables developers to effortlessly manage scheduled asynchronous tasks within Rust applications.
 
+[![CI](https://github.com/yourusername/taskline/workflows/CI/badge.svg)](https://github.com/yourusername/taskline/actions)
+[![Coverage](https://codecov.io/gh/yourusername/taskline/branch/main/graph/badge.svg)](https://codecov.io/gh/yourusername/taskline)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Crates.io](https://img.shields.io/crates/v/taskline.svg)](https://crates.io/crates/taskline)
+[![Documentation](https://docs.rs/taskline/badge.svg)](https://docs.rs/taskline)
 
 ## Purpose
 

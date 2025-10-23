@@ -63,25 +63,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
     
     // Run the scheduler (this will block until the scheduler is stopped)
     info!("Starting scheduler...");
-    
-    // For demonstration, we'll run for 10 minutes then stop
-    let scheduler_handle = {
-        let scheduler_clone = scheduler.clone();
-        tokio::spawn(async move {
-            scheduler_clone.run().await.unwrap();
-        })
-    };
-    
+
+    // Start the scheduler in the background
+    scheduler.start().await?;
+
     // Wait for 10 minutes
+    info!("Scheduler running. Will run for 10 minutes...");
     tokio::time::sleep(tokio::time::Duration::from_secs(10 * 60)).await;
-    
+
     // Stop the scheduler
     info!("Stopping scheduler...");
     scheduler.stop().await?;
-    
-    // Wait for the scheduler to fully stop
-    scheduler_handle.await?;
-    
+
     info!("Scheduler stopped. Example complete.");
     Ok(())
 }

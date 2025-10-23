@@ -298,3 +298,234 @@ impl fmt::Debug for Task {
             .finish()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::{AtomicU32, Ordering};
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_task_creation() {
+        let task = Task::new(|| async { Ok(()) });
+
+        assert!(!task.id().is_empty());
+        assert_eq!(task.status().await, TaskStatus::Idle);
+
+        let stats = task.stats().await;
+        assert_eq!(stats.executions, 0);
+        assert_eq!(stats.successes, 0);
+        assert_eq!(stats.failures, 0);
+    }
+
+    #[tokio::test]
+    async fn test_task_with_name() {
+        let task = Task::new(|| async { Ok(()) })
+            .with_name("Test Task");
+
+        let debug_str = format!("{:?}", task);
+        assert!(debug_str.contains("Test Task"));
+    }
+
+    #[tokio::test]
+    async fn test_task_execution_success() {
+        let counter = Arc::new(AtomicU32::new(0));
+        let counter_clone = Arc::clone(&counter);
+
+        let task = Task::new(move || {
+            let counter = Arc::clone(&counter_clone);
+            async move {
+                counter.fetch_add(1, Ordering::SeqCst);
+                Ok(())
+            }
+        });
+
+        let result = task.execute().await;
+        assert!(result.is_ok());
+        assert_eq!(counter.load(Ordering::SeqCst), 1);
+
+        let stats = task.stats().await;
+        assert_eq!(stats.executions, 1);
+        assert_eq!(stats.successes, 1);
+        assert_eq!(stats.failures, 0);
+    }
+
+    #[tokio::test]
+    async fn test_task_execution_failure() {
+        let task = Task::new(|| async {
+            Err(TasklineError::TaskExecutionError("intentional failure".to_string()))
+        });
+
+        let result = task.execute().await;
+        assert!(result.is_err());
+
+        let stats = task.stats().await;
+        assert_eq!(stats.executions, 1);
+        assert_eq!(stats.successes, 0);
+        assert_eq!(stats.failures, 1);
+    }
+
+    #[tokio::test]
+    async fn test_task_retry_logic() {
+        let counter = Arc::new(AtomicU32::new(0));
+        let counter_clone = Arc::clone(&counter);
+
+        let task = Task::new(move || {
+            let counter = Arc::clone(&counter_clone);
+            async move {
+                let count = counter.fetch_add(1, Ordering::SeqCst);
+                if count < 2 {
+                    Err(TasklineError::TaskExecutionError("retry me".to_string()))
+                } else {
+                    Ok(())
+                }
+            }
+        })
+        .with_config(TaskConfig {
+            timeout: Some(Duration::from_secs(5)),
+            max_retries: 3,
+            retry_delay: Duration::from_millis(10),
+            fail_scheduler_on_error: false,
+        });
+
+        let result = task.execute().await;
+        assert!(result.is_ok());
+        assert_eq!(counter.load(Ordering::SeqCst), 3);
+    }
+
+    #[tokio::test]
+    async fn test_task_timeout() {
+        let task = Task::new(|| async {
+            tokio::time::sleep(Duration::from_secs(2)).await;
+            Ok(())
+        })
+        .with_config(TaskConfig {
+            timeout: Some(Duration::from_millis(100)),
+            max_retries: 0,
+            retry_delay: Duration::from_secs(1),
+            fail_scheduler_on_error: false,
+        });
+
+        let result = task.execute().await;
+        assert!(result.is_err());
+
+        if let Err(TasklineError::TaskTimeout(msg)) = result {
+            assert!(msg.contains("timed out"));
+        } else {
+            panic!("Expected TaskTimeout error");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_task_pause_resume() {
+        let task = Task::new(|| async { Ok(()) });
+
+        assert_eq!(task.status().await, TaskStatus::Idle);
+
+        // Pause the task
+        let result = task.pause().await;
+        assert!(result.is_ok());
+        assert_eq!(task.status().await, TaskStatus::Paused);
+
+        // Resume the task
+        let result = task.resume().await;
+        assert!(result.is_ok());
+        assert_eq!(task.status().await, TaskStatus::Idle);
+    }
+
+    #[tokio::test]
+    async fn test_task_cannot_pause_while_running() {
+        let task = Task::new(|| async {
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            Ok(())
+        });
+
+        // Start execution in background
+        let task_clone = Arc::new(task);
+        let task_for_pause = Arc::clone(&task_clone);
+
+        tokio::spawn(async move {
+            task_for_pause.execute().await
+        });
+
+        // Give it a moment to start
+        tokio::time::sleep(Duration::from_millis(10)).await;
+
+        // Try to pause while running
+        let result = task_clone.pause().await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_task_with_schedule() {
+        let task = Task::new(|| async { Ok(()) })
+            .with_schedule("0 0 * * *");
+
+        assert!(task.is_ok());
+
+        let task = task.unwrap();
+        let stats = task.stats().await;
+        assert!(stats.next_execution.is_none());
+
+        // Update next execution
+        task.update_next_execution().await;
+        let stats = task.stats().await;
+        assert!(stats.next_execution.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_task_status_transitions() {
+        let task = Task::new(|| async {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            Ok(())
+        });
+
+        assert_eq!(task.status().await, TaskStatus::Idle);
+
+        let task = Arc::new(task);
+        let task_clone = Arc::clone(&task);
+
+        tokio::spawn(async move {
+            task_clone.execute().await
+        });
+
+        // Give it time to start
+        tokio::time::sleep(Duration::from_millis(10)).await;
+        let status = task.status().await;
+        assert!(status == TaskStatus::Running || status == TaskStatus::Completed);
+
+        // Wait for completion
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        assert_eq!(task.status().await, TaskStatus::Completed);
+    }
+
+    #[tokio::test]
+    async fn test_task_config_default() {
+        let config = TaskConfig::default();
+
+        assert_eq!(config.timeout, Some(Duration::from_secs(60)));
+        assert_eq!(config.max_retries, 3);
+        assert_eq!(config.retry_delay, Duration::from_secs(5));
+        assert!(!config.fail_scheduler_on_error);
+    }
+
+    #[tokio::test]
+    async fn test_task_stats_tracking() {
+        let task = Task::new(|| async {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+            Ok(())
+        });
+
+        // Execute multiple times
+        for _ in 0..3 {
+            task.execute().await.unwrap();
+        }
+
+        let stats = task.stats().await;
+        assert_eq!(stats.executions, 3);
+        assert_eq!(stats.successes, 3);
+        assert!(stats.total_execution_time > Duration::from_millis(0));
+        assert!(stats.avg_execution_time > Duration::from_millis(0));
+        assert!(stats.last_execution.is_some());
+    }
+}

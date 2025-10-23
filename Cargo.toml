@@ -40,6 +40,8 @@ tracing-integration = ["tracing", "tracing-subscriber"]
 [dev-dependencies]
 tokio-test = "0.4.3"
 tempfile = "3.9.0"
+rand = "0.8.5"
+criterion = { version = "0.5", features = ["async_tokio"] }
 
 [[example]]
 name = "basic_scheduler"
@@ -48,3 +50,7 @@ path = "examples/basic_scheduler.rs"
 [[example]]
 name = "advanced_usage"
 path = "examples/advanced_usage.rs"
+
+[[bench]]
+name = "scheduler_benchmarks"
+harness = false
