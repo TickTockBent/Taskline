@@ -1,3 +1,8 @@
+//! Task management and execution.
+//!
+//! This module provides the [`Task`] type and related functionality for creating
+//! and managing schedulable asynchronous tasks.
+
 use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
@@ -13,18 +18,33 @@ use crate::errors::TasklineError;
 use crate::cron_parser::CronSchedule;
 use crate::Result;
 
-/// Represents the status of a task
+/// Represents the current execution status of a task.
+///
+/// Tasks transition through various states during their lifecycle:
+/// - Start as `Idle`
+/// - Move to `Running` during execution
+/// - End as `Completed` or `Failed`
+/// - Can be manually set to `Paused`
+///
+/// # Examples
+///
+/// ```
+/// use taskline::TaskStatus;
+///
+/// let status = TaskStatus::Idle;
+/// assert_eq!(status.to_string(), "idle");
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TaskStatus {
-    /// Task is idle waiting for its next execution
+    /// Task is idle, waiting for its next scheduled execution.
     Idle,
-    /// Task is currently running
+    /// Task is currently executing.
     Running,
-    /// Task completed successfully
+    /// Task completed its last execution successfully.
     Completed,
-    /// Task failed with an error
+    /// Task failed during its last execution.
     Failed,
-    /// Task is paused (will not be executed by scheduler)
+    /// Task is paused and will not be executed by the scheduler.
     Paused,
 }
 
@@ -40,16 +60,47 @@ impl fmt::Display for TaskStatus {
     }
 }
 
-/// TaskConfig defines configuration options for task execution
+/// Configuration options for task execution behavior.
+///
+/// `TaskConfig` allows fine-grained control over how tasks are executed,
+/// including timeout settings, retry behavior, and error handling.
+///
+/// # Examples
+///
+/// ```
+/// use taskline::TaskConfig;
+/// use std::time::Duration;
+///
+/// let config = TaskConfig {
+///     timeout: Some(Duration::from_secs(30)),
+///     max_retries: 5,
+///     retry_delay: Duration::from_secs(10),
+///     fail_scheduler_on_error: false,
+/// };
+/// ```
 #[derive(Debug, Clone)]
 pub struct TaskConfig {
-    /// Maximum execution time before the task is timed out
+    /// Maximum execution time before the task is timed out.
+    ///
+    /// If `Some`, the task will be cancelled if it exceeds this duration.
+    /// If `None`, the task can run indefinitely.
     pub timeout: Option<Duration>,
-    /// Maximum number of retries on failure
+
+    /// Maximum number of retries on failure.
+    ///
+    /// If a task fails, it will be retried up to this many times before
+    /// giving up. Set to 0 for no retries.
     pub max_retries: u32,
-    /// Delay between retries
+
+    /// Delay between retry attempts.
+    ///
+    /// After a task fails, this duration will elapse before the next retry.
     pub retry_delay: Duration,
-    /// Whether to continue the scheduler if this task fails permanently
+
+    /// Whether a permanent task failure should stop the scheduler.
+    ///
+    /// If `true`, the scheduler will stop if this task fails after all retries.
+    /// If `false`, the scheduler continues running other tasks.
     pub fail_scheduler_on_error: bool,
 }
 
@@ -64,29 +115,109 @@ impl Default for TaskConfig {
     }
 }
 
-/// Statistics about task execution
+/// Statistics tracking task execution history and performance.
+///
+/// `TaskStats` provides detailed metrics about a task's execution history,
+/// including success/failure rates, timing information, and scheduling details.
+///
+/// # Examples
+///
+/// ```no_run
+/// # use taskline::{Task, TaskStats};
+/// # async fn example() {
+/// let task = Task::new(|| async { Ok(()) });
+/// task.execute().await.unwrap();
+///
+/// let stats: TaskStats = task.stats().await;
+/// println!("Executions: {}", stats.executions);
+/// println!("Success rate: {:.2}%",
+///     (stats.successes as f64 / stats.executions as f64) * 100.0);
+/// # }
+/// ```
 #[derive(Debug, Clone, Default)]
 pub struct TaskStats {
-    /// Number of times the task has been executed
+    /// Total number of times the task has been executed.
     pub executions: u64,
-    /// Number of successful executions
+
+    /// Number of successful executions.
     pub successes: u64,
-    /// Number of failed executions
+
+    /// Number of failed executions (including retries).
     pub failures: u64,
-    /// Total execution time across all runs
+
+    /// Cumulative execution time across all runs.
     pub total_execution_time: Duration,
-    /// Average execution time
+
+    /// Average execution time per run.
     pub avg_execution_time: Duration,
-    /// Last execution time
+
+    /// Timestamp of the most recent execution.
     pub last_execution: Option<DateTime<Utc>>,
-    /// Next scheduled execution time
+
+    /// Timestamp of the next scheduled execution.
     pub next_execution: Option<DateTime<Utc>>,
 }
 
-/// Type for the task's asynchronous callable function
+/// Type alias for the task's asynchronous callable function.
+///
+/// This represents a function that returns a future which produces a `Result<()>`.
 pub type TaskFn = Box<dyn Fn() -> Pin<Box<dyn Future<Output = Result<()>> + Send>> + Send + Sync>;
 
-/// A schedulable task that can be executed asynchronously
+/// A schedulable asynchronous task.
+///
+/// `Task` represents a unit of work that can be executed on a schedule or manually.
+/// Tasks support retry logic, timeouts, statistics tracking, and pause/resume functionality.
+///
+/// # Examples
+///
+/// ## Basic Task
+///
+/// ```
+/// use taskline::Task;
+///
+/// let task = Task::new(|| async {
+///     println!("Task executing!");
+///     Ok(())
+/// }).with_name("My Task");
+/// ```
+///
+/// ## Task with Configuration
+///
+/// ```
+/// use taskline::{Task, TaskConfig};
+/// use std::time::Duration;
+///
+/// let task = Task::new(|| async {
+///     // Your task logic
+///     Ok(())
+/// })
+/// .with_name("Configured Task")
+/// .with_config(TaskConfig {
+///     timeout: Some(Duration::from_secs(30)),
+///     max_retries: 3,
+///     retry_delay: Duration::from_secs(5),
+///     fail_scheduler_on_error: false,
+/// });
+/// ```
+///
+/// ## Task with State
+///
+/// ```
+/// use taskline::Task;
+/// use std::sync::Arc;
+/// use std::sync::atomic::{AtomicU32, Ordering};
+///
+/// let counter = Arc::new(AtomicU32::new(0));
+/// let counter_clone = Arc::clone(&counter);
+///
+/// let task = Task::new(move || {
+///     let counter = Arc::clone(&counter_clone);
+///     async move {
+///         counter.fetch_add(1, Ordering::SeqCst);
+///         Ok(())
+///     }
+/// });
+/// ```
 pub struct Task {
     /// Unique identifier for the task
     id: String,
@@ -105,8 +236,36 @@ pub struct Task {
 }
 
 impl Task {
-    /// Create a new task with a function to execute
-    pub fn new<F, Fut>(func: F) -> Self 
+    /// Creates a new task with the given async function.
+    ///
+    /// The function will be called each time the task is executed. It should return
+    /// a future that produces a `Result<()>`.
+    ///
+    /// # Arguments
+    ///
+    /// * `func` - An async function or closure that returns `Result<()>`
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use taskline::Task;
+    ///
+    /// // Simple task
+    /// let task = Task::new(|| async {
+    ///     println!("Hello from task!");
+    ///     Ok(())
+    /// });
+    ///
+    /// // Task with error handling
+    /// let task = Task::new(|| async {
+    ///     // Do work...
+    ///     if false {
+    ///         return Err("Something went wrong".into());
+    ///     }
+    ///     Ok(())
+    /// });
+    /// ```
+    pub fn new<F, Fut>(func: F) -> Self
     where
         F: Fn() -> Fut + Send + Sync + 'static,
         Fut: Future<Output = Result<()>> + Send + 'static,
@@ -123,49 +282,167 @@ impl Task {
             stats: Arc::new(Mutex::new(TaskStats::default())),
         }
     }
-    
-    /// Get the task's unique ID
+
+
+    /// Returns the task's unique identifier.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use taskline::Task;
+    ///
+    /// let task = Task::new(|| async { Ok(()) });
+    /// println!("Task ID: {}", task.id());
+    /// ```
     pub fn id(&self) -> &str {
         &self.id
     }
-    
-    /// Set a display name for the task
+
+    /// Sets a display name for the task (builder pattern).
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The name to assign to this task
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use taskline::Task;
+    ///
+    /// let task = Task::new(|| async { Ok(()) })
+    ///     .with_name("Daily Backup");
+    /// ```
     pub fn with_name(mut self, name: impl Into<String>) -> Self {
         self.name = name.into();
         self
     }
-    
-    /// Set the configuration for the task
+
+    /// Sets the configuration for the task (builder pattern).
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - The configuration to use for this task
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use taskline::{Task, TaskConfig};
+    /// use std::time::Duration;
+    ///
+    /// let task = Task::new(|| async { Ok(()) })
+    ///     .with_config(TaskConfig {
+    ///         timeout: Some(Duration::from_secs(30)),
+    ///         max_retries: 5,
+    ///         retry_delay: Duration::from_secs(2),
+    ///         fail_scheduler_on_error: false,
+    ///     });
+    /// ```
     pub fn with_config(mut self, config: TaskConfig) -> Self {
         self.config = config;
         self
     }
-    
-    /// Set the cron schedule for the task
+
+    /// Sets the cron schedule for the task (builder pattern).
+    ///
+    /// # Arguments
+    ///
+    /// * `cron_expr` - A cron expression string (e.g., "0 * * * *")
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Task)` if the cron expression is valid, or
+    /// `Err(TasklineError)` if parsing fails.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use taskline::Task;
+    ///
+    /// let task = Task::new(|| async { Ok(()) })
+    ///     .with_schedule("*/5 * * * *") // Every 5 minutes
+    ///     .unwrap();
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TasklineError::CronParseError`] if the cron expression is invalid.
     pub fn with_schedule(mut self, cron_expr: &str) -> Result<Self> {
         self.schedule = Some(CronSchedule::new(cron_expr)?);
         Ok(self)
     }
-    
-    /// Get the current status of the task
+
+    /// Returns the current status of the task.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use taskline::Task;
+    /// # async fn example() {
+    /// let task = Task::new(|| async { Ok(()) });
+    /// let status = task.status().await;
+    /// println!("Task status: {}", status);
+    /// # }
+    /// ```
     pub async fn status(&self) -> TaskStatus {
         *self.status.lock().await
     }
-    
-    /// Get the task statistics
+
+    /// Returns a snapshot of the task's execution statistics.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use taskline::Task;
+    /// # async fn example() {
+    /// let task = Task::new(|| async { Ok(()) });
+    /// task.execute().await.unwrap();
+    ///
+    /// let stats = task.stats().await;
+    /// println!("Executions: {}, Successes: {}", stats.executions, stats.successes);
+    /// # }
+    /// ```
     pub async fn stats(&self) -> TaskStats {
         self.stats.lock().await.clone()
     }
-    
-    /// Update the next execution time based on the schedule
+
+
+    /// Updates the next execution time based on the task's schedule.
+    ///
+    /// This is typically called automatically by the scheduler, but can be
+    /// called manually if needed.
     pub async fn update_next_execution(&self) {
         if let Some(schedule) = &self.schedule {
             let mut stats = self.stats.lock().await;
             stats.next_execution = schedule.next_execution(Utc::now());
         }
     }
-    
-    /// Execute the task with retry logic and timeout handling
+
+    /// Executes the task with retry logic and timeout handling.
+    ///
+    /// This method runs the task's function, applies the configured timeout,
+    /// handles retries on failure, and updates statistics.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` if the task completed successfully (possibly after retries),
+    /// or `Err(TasklineError)` if it failed after all retry attempts or timed out.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use taskline::Task;
+    /// # async fn example() {
+    /// let task = Task::new(|| async {
+    ///     println!("Running task...");
+    ///     Ok(())
+    /// });
+    ///
+    /// match task.execute().await {
+    ///     Ok(()) => println!("Task succeeded"),
+    ///     Err(e) => eprintln!("Task failed: {}", e),
+    /// }
+    /// # }
+    /// ```
     pub async fn execute(&self) -> Result<()> {
         info!("Executing task: {}", self.name);
         
@@ -260,8 +537,31 @@ impl Task {
             None => func().await,
         }
     }
-    
-    /// Pause the task so it won't be executed by the scheduler
+
+
+    /// Pauses the task so it won't be executed by the scheduler.
+    ///
+    /// A paused task remains in the scheduler but won't be executed until
+    /// it's resumed with [`Task::resume`].
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` if the task was successfully paused, or
+    /// `Err(TasklineError)` if the task is currently running.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TasklineError::TaskExecutionError`] if the task is currently running.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use taskline::Task;
+    /// # async fn example() {
+    /// let task = Task::new(|| async { Ok(()) });
+    /// task.pause().await.unwrap();
+    /// # }
+    /// ```
     pub async fn pause(&self) -> Result<()> {
         let mut status = self.status.lock().await;
         if *status != TaskStatus::Running {
@@ -273,8 +573,32 @@ impl Task {
             ))
         }
     }
-    
-    /// Resume a paused task
+
+
+    /// Resumes a paused task.
+    ///
+    /// A resumed task will be executed by the scheduler according to its schedule.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` if the task was successfully resumed, or
+    /// `Err(TasklineError)` if the task is not paused.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TasklineError::TaskExecutionError`] if the task is not paused.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use taskline::Task;
+    /// # async fn example() {
+    /// let task = Task::new(|| async { Ok(()) });
+    /// task.pause().await.unwrap();
+    /// // ... later ...
+    /// task.resume().await.unwrap();
+    /// # }
+    /// ```
     pub async fn resume(&self) -> Result<()> {
         let mut status = self.status.lock().await;
         if *status == TaskStatus::Paused {

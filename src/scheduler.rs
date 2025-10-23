@@ -1,3 +1,8 @@
+//! Scheduler for managing and executing tasks.
+//!
+//! This module provides the [`Scheduler`] type which manages a collection of tasks
+//! and executes them according to their cron schedules.
+
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -12,14 +17,41 @@ use crate::errors::TasklineError;
 use crate::task::{Task, TaskStatus};
 use crate::Result;
 
-/// Configuration options for the scheduler
+/// Configuration options for the scheduler.
+///
+/// `SchedulerConfig` controls the scheduler's behavior, including how often it checks
+/// for due tasks, error handling strategy, and shutdown behavior.
+///
+/// # Examples
+///
+/// ```
+/// use taskline::SchedulerConfig;
+/// use std::time::Duration;
+///
+/// let config = SchedulerConfig {
+///     check_interval: Duration::from_millis(100),  // Check every 100ms
+///     continue_on_error: true,                     // Keep running on errors
+///     shutdown_grace_period: Duration::from_secs(10), // 10s shutdown grace period
+/// };
+/// ```
 #[derive(Debug, Clone)]
 pub struct SchedulerConfig {
-    /// How frequently to check for tasks that need to be executed (in ms)
+    /// How frequently to check for tasks that need to be executed.
+    ///
+    /// Lower values provide more precise scheduling but increase CPU usage.
+    /// Default: 500ms
     pub check_interval: Duration,
-    /// Whether to continue running when a task fails
+
+    /// Whether to continue running when a task fails.
+    ///
+    /// If `true`, task failures don't stop the scheduler. If `false`, the scheduler
+    /// stops when any task fails. Default: `true`
     pub continue_on_error: bool,
-    /// How long to wait for tasks to complete on shutdown
+
+    /// How long to wait for tasks to complete during shutdown.
+    ///
+    /// When stopping the scheduler, this is the maximum time to wait for
+    /// running tasks to finish. Default: 30s
     pub shutdown_grace_period: Duration,
 }
 
@@ -33,7 +65,54 @@ impl Default for SchedulerConfig {
     }
 }
 
-/// The main scheduler that manages and executes tasks
+/// The main scheduler that manages and executes tasks.
+///
+/// `Scheduler` maintains a collection of tasks and executes them according to their
+/// cron schedules. It runs in the background and provides methods for managing tasks
+/// and controlling the scheduler lifecycle.
+///
+/// # Examples
+///
+/// ## Basic Usage
+///
+/// ```no_run
+/// use taskline::{Scheduler, Task};
+///
+/// #[tokio::main]
+/// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+///     let scheduler = Scheduler::new();
+///
+///     // Add tasks
+///     scheduler.add("0 * * * *", Task::new(|| async {
+///         println!("Hourly task");
+///         Ok(())
+///     }))?;
+///
+///     // Start scheduler
+///     scheduler.start().await?;
+///
+///     // ... do other work ...
+///
+///     // Stop scheduler
+///     scheduler.stop().await?;
+///     Ok(())
+/// }
+/// ```
+///
+/// ## Custom Configuration
+///
+/// ```
+/// use taskline::{Scheduler, SchedulerConfig};
+/// use std::time::Duration;
+///
+/// let config = SchedulerConfig {
+///     check_interval: Duration::from_millis(100),
+///     continue_on_error: true,
+///     shutdown_grace_period: Duration::from_secs(5),
+/// };
+///
+/// let scheduler = Scheduler::with_config(config);
+/// ```
 pub struct Scheduler {
     /// Map of task IDs to tasks
     tasks: Arc<Mutex<HashMap<String, Arc<Task>>>>,
@@ -48,12 +127,45 @@ pub struct Scheduler {
 }
 
 impl Scheduler {
-    /// Create a new scheduler with default configuration
+    /// Creates a new scheduler with default configuration.
+    ///
+    /// The default configuration uses:
+    /// - Check interval: 500ms
+    /// - Continue on error: `true`
+    /// - Shutdown grace period: 30s
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use taskline::Scheduler;
+    ///
+    /// let scheduler = Scheduler::new();
+    /// ```
     pub fn new() -> Self {
         Self::with_config(SchedulerConfig::default())
     }
-    
-    /// Create a new scheduler with the specified configuration
+
+
+    /// Creates a new scheduler with custom configuration.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - The configuration to use for this scheduler
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use taskline::{Scheduler, SchedulerConfig};
+    /// use std::time::Duration;
+    ///
+    /// let config = SchedulerConfig {
+    ///     check_interval: Duration::from_millis(100),
+    ///     continue_on_error: false,
+    ///     shutdown_grace_period: Duration::from_secs(10),
+    /// };
+    ///
+    /// let scheduler = Scheduler::with_config(config);
+    /// ```
     pub fn with_config(config: SchedulerConfig) -> Self {
         Scheduler {
             tasks: Arc::new(Mutex::new(HashMap::new())),
@@ -63,8 +175,40 @@ impl Scheduler {
             start_time: Arc::new(Mutex::new(None)),
         }
     }
-    
-    /// Add a task to be executed according to a cron schedule
+
+
+    /// Adds a task to the scheduler with a cron schedule.
+    ///
+    /// The task will be executed according to the provided cron expression.
+    /// Returns a unique task ID that can be used to reference the task later.
+    ///
+    /// # Arguments
+    ///
+    /// * `cron_expr` - A cron expression string (e.g., "0 * * * *")
+    /// * `task` - The task to schedule
+    ///
+    /// # Returns
+    ///
+    /// Returns the unique ID of the added task, or `Err` if the cron expression is invalid.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use taskline::{Scheduler, Task};
+    ///
+    /// let scheduler = Scheduler::new();
+    ///
+    /// let task_id = scheduler.add("0 * * * *", Task::new(|| async {
+    ///     println!("Running hourly");
+    ///     Ok(())
+    /// })).unwrap();
+    ///
+    /// println!("Added task with ID: {}", task_id);
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TasklineError::CronParseError`] if the cron expression is invalid.
     pub fn add(&self, cron_expr: &str, task: Task) -> Result<String> {
         let task = task.with_schedule(cron_expr)?;
         let task_id = task.id().to_string();
@@ -110,8 +254,35 @@ impl Scheduler {
     pub async fn task_ids(&self) -> Vec<String> {
         self.tasks.lock().await.keys().cloned().collect()
     }
-    
-    /// Start the scheduler and run it in the background
+
+
+    /// Starts the scheduler in the background.
+    ///
+    /// The scheduler begins monitoring tasks and executing them according to their schedules.
+    /// This method returns immediately, allowing you to continue other work while the
+    /// scheduler runs.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` if the scheduler started successfully, or `Err` if it's already running.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use taskline::Scheduler;
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let scheduler = Scheduler::new();
+    /// // Add tasks...
+    /// scheduler.start().await?;
+    /// // Do other work...
+    /// scheduler.stop().await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TasklineError::SchedulerError`] if the scheduler is already running.
     pub async fn start(&self) -> Result<()> {
         let mut running = self.running.lock().await;
         if *running {
@@ -159,8 +330,33 @@ impl Scheduler {
         
         Ok(())
     }
-    
-    /// Stop the scheduler
+
+
+    /// Stops the scheduler gracefully.
+    ///
+    /// The scheduler will stop accepting new task executions and wait for running tasks
+    /// to complete (up to the configured `shutdown_grace_period`).
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` if the scheduler stopped successfully, or `Err` if it's not running.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use taskline::Scheduler;
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let scheduler = Scheduler::new();
+    /// scheduler.start().await?;
+    /// // ... later ...
+    /// scheduler.stop().await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TasklineError::SchedulerError`] if the scheduler is not running.
     pub async fn stop(&self) -> Result<()> {
         let mut running = self.running.lock().await;
         if !*running {

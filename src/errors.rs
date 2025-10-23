@@ -1,26 +1,100 @@
+//! Error types for Taskline operations.
+//!
+//! This module defines all error types that can occur during scheduler and task operations.
+
 use std::fmt;
 use std::error::Error;
 use std::io;
 
-/// Represents all possible errors that can occur in Taskline
+/// Represents all possible errors that can occur in Taskline operations.
+///
+/// This error type covers all failure scenarios including cron parsing errors,
+/// task execution failures, configuration issues, and scheduler management errors.
+///
+/// # Examples
+///
+/// ```
+/// use taskline::{TasklineError, Result};
+///
+/// fn parse_cron(expr: &str) -> Result<()> {
+///     if expr.is_empty() {
+///         return Err(TasklineError::CronParseError("Empty expression".to_string()));
+///     }
+///     Ok(())
+/// }
+/// ```
 #[derive(Debug)]
 pub enum TasklineError {
-    /// Error parsing a cron expression
+    /// Error parsing a cron expression.
+    ///
+    /// This occurs when an invalid cron expression is provided to the scheduler.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use taskline::TasklineError;
+    ///
+    /// let error = TasklineError::CronParseError("Invalid syntax".to_string());
+    /// assert_eq!(error.to_string(), "Cron parsing error: Invalid syntax");
+    /// ```
     CronParseError(String),
-    
-    /// Error during task execution
+
+    /// Error during task execution.
+    ///
+    /// This occurs when a task's function returns an error during execution.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use taskline::TasklineError;
+    ///
+    /// let error = TasklineError::TaskExecutionError("Database connection failed".to_string());
+    /// ```
     TaskExecutionError(String),
-    
-    /// IO error during operation
+
+    /// IO error during operation.
+    ///
+    /// This wraps standard library IO errors that may occur during file operations
+    /// or other IO-related tasks.
     IoError(io::Error),
-    
-    /// Invalid configuration
+
+    /// Invalid configuration provided.
+    ///
+    /// This occurs when scheduler or task configuration values are invalid or incompatible.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use taskline::TasklineError;
+    ///
+    /// let error = TasklineError::ConfigError("Invalid timeout value".to_string());
+    /// ```
     ConfigError(String),
-    
-    /// Task timeout
+
+    /// Task execution exceeded timeout.
+    ///
+    /// This occurs when a task runs longer than its configured timeout duration.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use taskline::TasklineError;
+    ///
+    /// let error = TasklineError::TaskTimeout("Task exceeded 30s timeout".to_string());
+    /// ```
     TaskTimeout(String),
-    
-    /// Scheduler error
+
+    /// Scheduler management error.
+    ///
+    /// This occurs during scheduler lifecycle operations like start, stop, or task management.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use taskline::TasklineError;
+    ///
+    /// let error = TasklineError::SchedulerError("Already running".to_string());
+    /// ```
     SchedulerError(String),
 }
 
