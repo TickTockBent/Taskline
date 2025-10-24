@@ -3,14 +3,7 @@
 
 [advisories]
 # Deny all security vulnerabilities
-vulnerability = "deny"
-# Warn on unmaintained crates
-unmaintained = "warn"
-# Warn on unsound crates
-unsound = "warn"
-# Warn on yanked crates
-yanked = "warn"
-# Ignore specific advisories (add if needed)
+version = 2
 ignore = []
 
 [licenses]
