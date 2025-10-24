@@ -143,10 +143,8 @@ impl CronSchedule {
     /// ```
     pub fn time_until_next(&self) -> Option<Duration> {
         let now = Utc::now();
-        match self.next_execution(now) {
-            Some(next) => Some(next.signed_duration_since(now)),
-            None => None,
-        }
+        self.next_execution(now)
+            .map(|next| next.signed_duration_since(now))
     }
 
     /// Checks if the schedule should execute at the given time.
@@ -200,6 +198,7 @@ impl CronSchedule {
 ///     println!("It's the top of the hour!");
 /// }
 /// ```
+#[allow(dead_code)]
 pub fn is_scheduled_now(cron_expr: &str) -> Result<bool, TasklineError> {
     let schedule = CronSchedule::new(cron_expr)?;
     Ok(schedule.should_execute_at(Utc::now()))

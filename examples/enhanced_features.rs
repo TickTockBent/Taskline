@@ -1,3 +1,9 @@
+#![allow(unused_must_use)]
+#![allow(clippy::all)]
+//! Allow dead code in examples
+#![allow(dead_code)]
+#![allow(unused_variables)]
+
 //! Example demonstrating the enhanced features of Taskline
 //!
 //! This example showcases:

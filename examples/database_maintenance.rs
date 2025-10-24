@@ -1,3 +1,9 @@
+#![allow(unused_must_use)]
+#![allow(clippy::all)]
+//! Allow dead code in examples
+#![allow(dead_code)]
+#![allow(unused_variables)]
+
 //! Real-world example: Database maintenance tasks
 //!
 //! This example demonstrates:

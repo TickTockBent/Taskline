@@ -21,7 +21,7 @@ use crate::Result;
 #[derive(Debug, Clone)]
 pub enum ScheduleType {
     /// Cron-based scheduling using cron expressions
-    Cron(CronSchedule),
+    Cron(Box<CronSchedule>),
     /// Interval-based scheduling using a fixed duration
     Interval(Duration),
 }
@@ -286,7 +286,7 @@ impl Task {
 
         Task {
             id: task_id.clone(),
-            name: format!("task_{}", task_id[..8].to_string()),
+            name: format!("task_{}", &task_id[..8]),
             schedule: None,
             tags: Vec::new(),
             function: Box::new(move || Box::pin(func())),
@@ -387,7 +387,7 @@ impl Task {
             self.name = Self::generate_name_from_cron(cron_expr);
         }
 
-        self.schedule = Some(ScheduleType::Cron(cron_schedule));
+        self.schedule = Some(ScheduleType::Cron(Box::new(cron_schedule)));
         Ok(self)
     }
 

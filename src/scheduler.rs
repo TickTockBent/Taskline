@@ -128,6 +128,12 @@ pub struct Scheduler {
     event_bus: EventBus,
 }
 
+impl Default for Scheduler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Scheduler {
     /// Creates a new scheduler with default configuration.
     ///
@@ -662,11 +668,8 @@ impl Scheduler {
 
     /// Get the uptime of the scheduler
     pub async fn uptime(&self) -> Option<chrono::Duration> {
-        if let Some(start_time) = *self.start_time.lock().await {
-            Some(Utc::now().signed_duration_since(start_time))
-        } else {
-            None
-        }
+        (*self.start_time.lock().await)
+            .map(|start_time| Utc::now().signed_duration_since(start_time))
     }
 
     /// Check if the scheduler is currently running
