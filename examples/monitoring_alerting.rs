@@ -182,7 +182,7 @@ impl SystemMetrics {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    env_logger::init();
+    // env_logger::init(); // Optional: enable with basic-logging feature
 
     println!("🔍 Starting Monitoring & Alerting System\n");
 

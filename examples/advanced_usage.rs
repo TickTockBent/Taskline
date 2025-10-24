@@ -4,7 +4,7 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use env_logger::Builder;
+// use env_logger::Builder;
 use log::{error, info, warn, LevelFilter};
 use std::error::Error;
 use std::sync::Arc;
@@ -38,7 +38,7 @@ impl Counter {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     // Initialize the logger with more verbose output
-    Builder::new().filter_level(LevelFilter::Debug).init();
+    // Builder::new().filter_level(LevelFilter::Debug).init();
 
     info!("Starting advanced scheduler example");
 

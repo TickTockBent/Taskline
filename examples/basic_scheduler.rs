@@ -4,7 +4,7 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use env_logger::Builder;
+// use env_logger::Builder;
 use log::{info, LevelFilter};
 use std::error::Error;
 use taskline::{Scheduler, Task};
@@ -12,7 +12,7 @@ use taskline::{Scheduler, Task};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     // Initialize the logger
-    Builder::new().filter_level(LevelFilter::Info).init();
+    // Builder::new().filter_level(LevelFilter::Info).init();
 
     info!("Starting basic scheduler example");
 
