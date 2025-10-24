@@ -7,13 +7,13 @@
 //! - External service integration
 //! - Feed aggregation
 
-use taskline::{Scheduler, Task, TaskConfig, SchedulerEvent};
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
+use taskline::{Scheduler, SchedulerEvent, Task, TaskConfig};
 use tokio::sync::RwLock;
-use chrono::{DateTime, Utc};
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
 
 #[derive(Clone)]
 struct ScraperSystem {
@@ -77,7 +77,10 @@ impl RateLimiter {
     }
 
     async fn can_make_request(&mut self, service: &str) -> bool {
-        let count = self.requests_per_minute.entry(service.to_string()).or_insert(0);
+        let count = self
+            .requests_per_minute
+            .entry(service.to_string())
+            .or_insert(0);
         if *count >= self.max_requests {
             println!("⏸️  Rate limit reached for '{}', waiting...", service);
             false
@@ -100,13 +103,17 @@ impl DataStore {
         let data = WeatherData {
             city: city.to_string(),
             temperature: 15.0 + (rand::random::<f64>() * 20.0),
-            conditions: vec!["Sunny", "Cloudy", "Rainy", "Partly Cloudy"][rand::random::<usize>() % 4].to_string(),
+            conditions: vec!["Sunny", "Cloudy", "Rainy", "Partly Cloudy"]
+                [rand::random::<usize>() % 4]
+                .to_string(),
             timestamp: Utc::now(),
         };
 
         self.weather_data.insert(city.to_string(), data.clone());
-        println!("🌤️  Weather for {}: {:.1}°C, {}",
-            data.city, data.temperature, data.conditions);
+        println!(
+            "🌤️  Weather for {}: {:.1}°C, {}",
+            data.city, data.temperature, data.conditions
+        );
 
         Ok(data)
     }
@@ -131,13 +138,18 @@ impl DataStore {
         if let Some(prev) = self.stock_prices.get(symbol) {
             let price_change = ((stock.price - prev.price) / prev.price) * 100.0;
             if price_change.abs() > 2.0 {
-                println!("📈 Alert: {} changed {:.2}% (${:.2} -> ${:.2})",
-                    symbol, price_change, prev.price, stock.price);
+                println!(
+                    "📈 Alert: {} changed {:.2}% (${:.2} -> ${:.2})",
+                    symbol, price_change, prev.price, stock.price
+                );
             }
         }
 
         self.stock_prices.insert(symbol.to_string(), stock.clone());
-        println!("💹 {}: ${:.2} ({:+.2}%)", stock.symbol, stock.price, stock.change_percent);
+        println!(
+            "💹 {}: ${:.2} ({:+.2}%)",
+            stock.symbol, stock.price, stock.change_percent
+        );
 
         Ok(stock)
     }
@@ -194,15 +206,21 @@ impl DataStore {
         if let Some(prev) = self.product_prices.get(product_id) {
             let price_drop = prev.price - product.price;
             if price_drop > 5.0 {
-                println!("🔔 Price Drop Alert: {} dropped ${:.2} (${:.2} -> ${:.2})",
-                    product.name, price_drop, prev.price, product.price);
+                println!(
+                    "🔔 Price Drop Alert: {} dropped ${:.2} (${:.2} -> ${:.2})",
+                    product.name, price_drop, prev.price, product.price
+                );
             }
         }
 
-        self.product_prices.insert(product_id.to_string(), product.clone());
-        println!("🏷️  {}: ${:.2} {}",
-            product.name, product.price,
-            if product.availability { "✅" } else { "❌" });
+        self.product_prices
+            .insert(product_id.to_string(), product.clone());
+        println!(
+            "🏷️  {}: ${:.2} {}",
+            product.name,
+            product.price,
+            if product.availability { "✅" } else { "❌" }
+        );
 
         Ok(product)
     }
@@ -232,7 +250,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 SchedulerEvent::TaskCompleted { task_name, .. } => {
                     // Suppress individual task logs for cleaner output
                 }
-                SchedulerEvent::TaskFailed { task_name, error, .. } => {
+                SchedulerEvent::TaskFailed {
+                    task_name, error, ..
+                } => {
                     eprintln!("❌ '{}' failed: {}", task_name, error);
                 }
                 _ => {}
@@ -295,8 +315,9 @@ async fn setup_polling_tasks(system: &ScraperSystem) -> Result<(), Box<dyn std::
             let cities = vec!["New York", "London", "Tokyo"];
 
             for city in cities {
-                ds.fetch_weather(city).await.map_err(|e|
-                    taskline::TasklineError::TaskExecutionError(e))?;
+                ds.fetch_weather(city)
+                    .await
+                    .map_err(|e| taskline::TasklineError::TaskExecutionError(e))?;
             }
 
             Ok(())
@@ -325,8 +346,9 @@ async fn setup_polling_tasks(system: &ScraperSystem) -> Result<(), Box<dyn std::
             let symbols = vec!["AAPL", "GOOGL", "MSFT", "AMZN"];
 
             for symbol in symbols {
-                ds.fetch_stock_price(symbol).await.map_err(|e|
-                    taskline::TasklineError::TaskExecutionError(e))?;
+                ds.fetch_stock_price(symbol)
+                    .await
+                    .map_err(|e| taskline::TasklineError::TaskExecutionError(e))?;
             }
 
             Ok(())
@@ -350,8 +372,9 @@ async fn setup_polling_tasks(system: &ScraperSystem) -> Result<(), Box<dyn std::
             ];
 
             for feed in feeds {
-                ds.fetch_rss_feed(feed).await.map_err(|e|
-                    taskline::TasklineError::TaskExecutionError(e))?;
+                ds.fetch_rss_feed(feed)
+                    .await
+                    .map_err(|e| taskline::TasklineError::TaskExecutionError(e))?;
             }
 
             Ok(())
@@ -379,8 +402,9 @@ async fn setup_polling_tasks(system: &ScraperSystem) -> Result<(), Box<dyn std::
             let products = vec!["PROD001", "PROD002", "PROD003"];
 
             for product in products {
-                ds.check_product_price(product).await.map_err(|e|
-                    taskline::TasklineError::TaskExecutionError(e))?;
+                ds.check_product_price(product)
+                    .await
+                    .map_err(|e| taskline::TasklineError::TaskExecutionError(e))?;
                 tokio::time::sleep(Duration::from_millis(500)).await; // Be nice
             }
 

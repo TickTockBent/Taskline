@@ -7,11 +7,11 @@
 //! - Scheduled data cleanup
 //! - Metrics collection
 
-use taskline::{Scheduler, Task, SchedulerEvent, TaskConfig};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;
+use taskline::{Scheduler, SchedulerEvent, Task, TaskConfig};
 use tokio::sync::RwLock;
-use serde::{Deserialize, Serialize};
 
 // Simulated application state
 #[derive(Clone)]
@@ -99,10 +99,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         while let Ok(event) = event_receiver.recv().await {
             match event {
-                SchedulerEvent::TaskCompleted { task_name, duration_ms, .. } => {
+                SchedulerEvent::TaskCompleted {
+                    task_name,
+                    duration_ms,
+                    ..
+                } => {
                     println!("✅ Task '{}' completed in {}ms", task_name, duration_ms);
                 }
-                SchedulerEvent::TaskFailed { task_name, error, .. } => {
+                SchedulerEvent::TaskFailed {
+                    task_name, error, ..
+                } => {
                     eprintln!("❌ Task '{}' failed: {}", task_name, error);
                 }
                 _ => {}
@@ -178,7 +184,7 @@ async fn setup_scheduled_tasks(state: &AppState) -> Result<(), Box<dyn std::erro
             }
         }
     })
-    .with_schedule("*/5 * * * *")?  // Every 5 minutes
+    .with_schedule("*/5 * * * *")? // Every 5 minutes
     .with_tags(&["database", "maintenance"])
     .with_config(TaskConfig {
         timeout: Some(Duration::from_secs(30)),
@@ -204,7 +210,7 @@ async fn setup_scheduled_tasks(state: &AppState) -> Result<(), Box<dyn std::erro
             }
         }
     })
-    .with_schedule("0 2 * * *")?  // Daily at 2 AM
+    .with_schedule("0 2 * * *")? // Daily at 2 AM
     .with_tags(&["database", "optimization", "nightly"]);
 
     state.scheduler.add_task(optimize_task).await?;
@@ -224,7 +230,7 @@ async fn setup_scheduled_tasks(state: &AppState) -> Result<(), Box<dyn std::erro
             }
         }
     })
-    .with_schedule("0 3 * * *")?  // Daily at 3 AM
+    .with_schedule("0 3 * * *")? // Daily at 3 AM
     .with_tags(&["database", "backup", "critical"]);
 
     state.scheduler.add_task(backup_task).await?;
@@ -241,8 +247,10 @@ async fn setup_scheduled_tasks(state: &AppState) -> Result<(), Box<dyn std::erro
             m.active_users = rand::random::<u64>() % 1000;
             m.cache_hit_rate = (rand::random::<u64>() % 100) as f64 / 100.0;
 
-            println!("📊 Metrics updated - Requests: {}, Users: {}",
-                m.requests_served, m.active_users);
+            println!(
+                "📊 Metrics updated - Requests: {}, Users: {}",
+                m.requests_served, m.active_users
+            );
 
             Ok(())
         }

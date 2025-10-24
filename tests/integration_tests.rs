@@ -104,9 +104,7 @@ async fn test_concurrent_task_execution() {
             }
         });
 
-        let handle = tokio::spawn(async move {
-            task.execute().await
-        });
+        let handle = tokio::spawn(async move { task.execute().await });
 
         handles.push(handle);
     }

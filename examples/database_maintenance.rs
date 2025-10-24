@@ -7,11 +7,11 @@
 //! - Vacuum operations
 //! - Statistics updates
 
-use taskline::{Scheduler, Task, TaskConfig, SchedulerEvent};
+use chrono::{DateTime, Utc};
 use std::sync::Arc;
 use std::time::Duration;
+use taskline::{Scheduler, SchedulerEvent, Task, TaskConfig};
 use tokio::sync::RwLock;
-use chrono::{DateTime, Utc};
 
 #[derive(Clone)]
 struct DatabaseManager {
@@ -72,7 +72,11 @@ impl ConnectionPool {
 
     async fn rebuild_indexes(&mut self) -> Result<usize, String> {
         println!("  🔧 Rebuilding database indexes...");
-        let indexes = vec!["idx_users_email", "idx_orders_date", "idx_products_category"];
+        let indexes = vec![
+            "idx_users_email",
+            "idx_orders_date",
+            "idx_products_category",
+        ];
 
         for (i, index) in indexes.iter().enumerate() {
             let query = format!("REINDEX INDEX {}", index);
@@ -107,7 +111,10 @@ impl ConnectionPool {
     }
 
     async fn archive_old_records(&mut self, table: &str, days: u32) -> Result<usize, String> {
-        println!("  📦 Archiving {} records older than {} days...", table, days);
+        println!(
+            "  📦 Archiving {} records older than {} days...",
+            table, days
+        );
 
         // Simulate archival
         let insert_query = format!(
@@ -129,7 +136,8 @@ impl ConnectionPool {
 
     async fn check_table_bloat(&mut self) -> Result<Vec<String>, String> {
         println!("  🔍 Checking for table bloat...");
-        self.execute_query("SELECT * FROM pg_stat_user_tables").await?;
+        self.execute_query("SELECT * FROM pg_stat_user_tables")
+            .await?;
 
         // Simulate finding bloated tables
         let bloated = if rand::random::<f64>() > 0.7 {
@@ -139,7 +147,11 @@ impl ConnectionPool {
         };
 
         if !bloated.is_empty() {
-            println!("  ⚠️  Found {} bloated tables: {:?}", bloated.len(), bloated);
+            println!(
+                "  ⚠️  Found {} bloated tables: {:?}",
+                bloated.len(),
+                bloated
+            );
         } else {
             println!("  ✅ No significant bloat detected");
         }
@@ -165,9 +177,7 @@ impl BackupManager {
         // Simulate backup process
         tokio::time::sleep(Duration::from_millis(500)).await;
 
-        let duration = Utc::now()
-            .signed_duration_since(start)
-            .num_seconds() as u64;
+        let duration = Utc::now().signed_duration_since(start).num_seconds() as u64;
 
         let record = BackupRecord {
             timestamp: start,
@@ -193,9 +203,7 @@ impl BackupManager {
         // Simulate backup
         tokio::time::sleep(Duration::from_millis(200)).await;
 
-        let duration = Utc::now()
-            .signed_duration_since(start)
-            .num_seconds() as u64;
+        let duration = Utc::now().signed_duration_since(start).num_seconds() as u64;
 
         let record = BackupRecord {
             timestamp: start,
@@ -217,7 +225,8 @@ impl BackupManager {
         let cutoff = Utc::now() - chrono::Duration::days(retain_days as i64);
         let before_count = self.backup_history.len();
 
-        self.backup_history.retain(|backup| backup.timestamp > cutoff);
+        self.backup_history
+            .retain(|backup| backup.timestamp > cutoff);
 
         let removed = before_count - self.backup_history.len();
         println!("✅ Removed {} old backup(s)", removed);
@@ -235,7 +244,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let scheduler = Arc::new(Scheduler::new());
     let connection_pool = Arc::new(RwLock::new(ConnectionPool::new(100)));
     let backup_manager = Arc::new(RwLock::new(BackupManager::new(
-        "/backups/database".to_string()
+        "/backups/database".to_string(),
     )));
 
     let db_manager = DatabaseManager {
@@ -249,10 +258,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         while let Ok(event) = event_receiver.recv().await {
             match event {
-                SchedulerEvent::TaskCompleted { task_name, duration_ms, .. } => {
+                SchedulerEvent::TaskCompleted {
+                    task_name,
+                    duration_ms,
+                    ..
+                } => {
                     println!("✅ '{}' completed in {}ms\n", task_name, duration_ms);
                 }
-                SchedulerEvent::TaskFailed { task_name, error, .. } => {
+                SchedulerEvent::TaskFailed {
+                    task_name, error, ..
+                } => {
                     eprintln!("❌ '{}' failed: {}\n", task_name, error);
                 }
                 _ => {}

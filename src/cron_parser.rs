@@ -3,10 +3,10 @@
 //! This module provides functionality for parsing cron expressions and calculating
 //! the next execution times for scheduled tasks.
 
+use chrono::{DateTime, Duration, Utc};
 use cron::Schedule;
-use std::str::FromStr;
-use chrono::{DateTime, Utc, Duration};
 use log::{debug, trace};
+use std::str::FromStr;
 
 use crate::errors::TasklineError;
 
@@ -77,9 +77,10 @@ impl CronSchedule {
         let schedule = match Schedule::from_str(&cron_expr) {
             Ok(schedule) => schedule,
             Err(e) => {
-                return Err(TasklineError::CronParseError(
-                    format!("Invalid cron expression '{}': {}", expression, e)
-                ));
+                return Err(TasklineError::CronParseError(format!(
+                    "Invalid cron expression '{}': {}",
+                    expression, e
+                )));
             }
         };
 
@@ -208,36 +209,36 @@ pub fn is_scheduled_now(cron_expr: &str) -> Result<bool, TasklineError> {
 mod tests {
     use super::*;
     use chrono::TimeZone;
-    
+
     #[test]
     fn test_parse_valid_expression() {
         let result = CronSchedule::new("* * * * *");
         assert!(result.is_ok());
     }
-    
+
     #[test]
     fn test_parse_invalid_expression() {
         let result = CronSchedule::new("invalid");
         assert!(result.is_err());
     }
-    
+
     #[test]
     fn test_next_execution() {
         let schedule = CronSchedule::new("0 0 * * *").unwrap(); // Daily at midnight
         let now = Utc.with_ymd_and_hms(2023, 1, 1, 12, 0, 0).unwrap();
-        
+
         let next = schedule.next_execution(now).unwrap();
         assert_eq!(next, Utc.with_ymd_and_hms(2023, 1, 2, 0, 0, 0).unwrap());
     }
-    
+
     #[test]
     fn test_should_execute_at() {
         let schedule = CronSchedule::new("0 12 * * *").unwrap(); // Daily at noon
-        
+
         // Should execute at noon
         let noon = Utc.with_ymd_and_hms(2023, 1, 1, 12, 0, 0).unwrap();
         assert!(schedule.should_execute_at(noon));
-        
+
         // Should not execute at 12:01
         let after_noon = Utc.with_ymd_and_hms(2023, 1, 1, 12, 1, 0).unwrap();
         assert!(!schedule.should_execute_at(after_noon));

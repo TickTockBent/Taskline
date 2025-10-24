@@ -2,18 +2,16 @@
 //!
 //! This module provides an event bus for subscribing to task and scheduler lifecycle events.
 
-use std::sync::Arc;
-use chrono::{DateTime, Utc};
-use tokio::sync::broadcast;
 use crate::task::TaskStatus;
+use chrono::{DateTime, Utc};
+use std::sync::Arc;
+use tokio::sync::broadcast;
 
 /// Represents different types of events that can occur in the scheduler.
 #[derive(Debug, Clone)]
 pub enum SchedulerEvent {
     /// The scheduler has started
-    SchedulerStarted {
-        timestamp: DateTime<Utc>,
-    },
+    SchedulerStarted { timestamp: DateTime<Utc> },
 
     /// The scheduler has stopped
     SchedulerStopped {

@@ -7,12 +7,12 @@
 //! - Event-triggered notifications
 //! - Multi-channel notifications (email, SMS, push)
 
-use taskline::{Scheduler, Task, TaskConfig, SchedulerEvent};
-use std::sync::Arc;
-use std::time::Duration;
-use tokio::sync::RwLock;
 use chrono::{DateTime, Utc};
 use std::collections::VecDeque;
+use std::sync::Arc;
+use std::time::Duration;
+use taskline::{Scheduler, SchedulerEvent, Task, TaskConfig};
+use tokio::sync::RwLock;
 
 #[derive(Clone)]
 struct NotificationSystem {
@@ -121,7 +121,12 @@ impl EmailService {
         }
     }
 
-    async fn send_bulk_email(&mut self, recipients: Vec<&str>, subject: &str, body: &str) -> Result<usize, String> {
+    async fn send_bulk_email(
+        &mut self,
+        recipients: Vec<&str>,
+        subject: &str,
+        body: &str,
+    ) -> Result<usize, String> {
         let total_count = recipients.len();
         println!("📧 Sending bulk email to {} recipient(s)...", total_count);
 
@@ -134,7 +139,10 @@ impl EmailService {
             tokio::time::sleep(Duration::from_millis(50)).await;
         }
 
-        println!("✅ Bulk send complete: {}/{} successful", sent_count, total_count);
+        println!(
+            "✅ Bulk send complete: {}/{} successful",
+            sent_count, total_count
+        );
         Ok(sent_count)
     }
 
@@ -156,11 +164,15 @@ impl NotificationQueue {
 
     fn add(&mut self, notification: Notification) {
         self.pending.push(notification);
-        self.pending.sort_by(|a, b| b.priority.partial_cmp(&a.priority).unwrap());
+        self.pending
+            .sort_by(|a, b| b.priority.partial_cmp(&a.priority).unwrap());
     }
 
     async fn process_queue(&mut self, max_batch: usize) -> Result<usize, String> {
-        let batch: Vec<_> = self.pending.drain(..max_batch.min(self.pending.len())).collect();
+        let batch: Vec<_> = self
+            .pending
+            .drain(..max_batch.min(self.pending.len()))
+            .collect();
         let count = batch.len();
 
         if count == 0 {
@@ -175,16 +187,28 @@ impl NotificationQueue {
 
             match notification.channel {
                 NotificationChannel::Email => {
-                    println!("  ✉️  Email to {}: {}", notification.recipient, notification.message);
+                    println!(
+                        "  ✉️  Email to {}: {}",
+                        notification.recipient, notification.message
+                    );
                 }
                 NotificationChannel::Sms => {
-                    println!("  📱 SMS to {}: {}", notification.recipient, notification.message);
+                    println!(
+                        "  📱 SMS to {}: {}",
+                        notification.recipient, notification.message
+                    );
                 }
                 NotificationChannel::PushNotification => {
-                    println!("  🔔 Push to {}: {}", notification.recipient, notification.message);
+                    println!(
+                        "  🔔 Push to {}: {}",
+                        notification.recipient, notification.message
+                    );
                 }
                 NotificationChannel::Webhook => {
-                    println!("  🔗 Webhook to {}: {}", notification.recipient, notification.message);
+                    println!(
+                        "  🔗 Webhook to {}: {}",
+                        notification.recipient, notification.message
+                    );
                 }
             }
 
@@ -216,7 +240,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         while let Ok(event) = event_receiver.recv().await {
             match event {
-                SchedulerEvent::TaskFailed { task_name, error, .. } => {
+                SchedulerEvent::TaskFailed {
+                    task_name, error, ..
+                } => {
                     eprintln!("⚠️  Notification task '{}' failed: {}", task_name, error);
                 }
                 _ => {}
@@ -275,7 +301,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn setup_notification_tasks(system: &NotificationSystem) -> Result<(), Box<dyn std::error::Error>> {
+async fn setup_notification_tasks(
+    system: &NotificationSystem,
+) -> Result<(), Box<dyn std::error::Error>> {
     // Task 1: Daily digest - Every day at 8 AM
     let email_service = system.email_service.clone();
     let daily_digest = Task::new(move || {
@@ -289,7 +317,9 @@ async fn setup_notification_tasks(system: &NotificationSystem) -> Result<(), Box
                 "• 2 upcoming events".to_string(),
             ];
 
-            email.send_digest("user@example.com", digest_items).await
+            email
+                .send_digest("user@example.com", digest_items)
+                .await
                 .map_err(|e| taskline::TasklineError::TaskExecutionError(e))
         }
     })
@@ -329,11 +359,14 @@ async fn setup_notification_tasks(system: &NotificationSystem) -> Result<(), Box
             let has_reminder = rand::random::<f64>() > 0.6;
 
             if has_reminder {
-                email.send_email(
-                    "user@example.com",
-                    "Reminder: Upcoming Meeting",
-                    "You have a meeting in 30 minutes"
-                ).await.map_err(|e| taskline::TasklineError::TaskExecutionError(e))?;
+                email
+                    .send_email(
+                        "user@example.com",
+                        "Reminder: Upcoming Meeting",
+                        "You have a meeting in 30 minutes",
+                    )
+                    .await
+                    .map_err(|e| taskline::TasklineError::TaskExecutionError(e))?;
             }
 
             Ok(())
@@ -350,7 +383,9 @@ async fn setup_notification_tasks(system: &NotificationSystem) -> Result<(), Box
         let q = queue.clone();
         async move {
             let mut queue = q.write().await;
-            queue.process_queue(5).await
+            queue
+                .process_queue(5)
+                .await
                 .map_err(|e| taskline::TasklineError::TaskExecutionError(e))?;
             Ok(())
         }
@@ -374,16 +409,19 @@ async fn setup_notification_tasks(system: &NotificationSystem) -> Result<(), Box
                 "customer3@example.com",
             ];
 
-            email.send_bulk_email(
-                recipients,
-                "Special Offer: 20% Off This Week!",
-                "Don't miss our exclusive weekly deals..."
-            ).await.map_err(|e| taskline::TasklineError::TaskExecutionError(e))?;
+            email
+                .send_bulk_email(
+                    recipients,
+                    "Special Offer: 20% Off This Week!",
+                    "Don't miss our exclusive weekly deals...",
+                )
+                .await
+                .map_err(|e| taskline::TasklineError::TaskExecutionError(e))?;
 
             Ok(())
         }
     })
-    .with_schedule("0 10 * * 4")?  // Thursday at 10 AM
+    .with_schedule("0 10 * * 4")? // Thursday at 10 AM
     .with_tags(&["marketing", "campaign", "bulk"])
     .with_config(TaskConfig {
         timeout: Some(Duration::from_secs(300)),
@@ -405,11 +443,14 @@ async fn setup_notification_tasks(system: &NotificationSystem) -> Result<(), Box
             let has_abandoned = rand::random::<f64>() > 0.5;
 
             if has_abandoned {
-                email.send_email(
-                    "shopper@example.com",
-                    "Don't Forget Your Cart!",
-                    "You left items in your cart. Complete your purchase now!"
-                ).await.map_err(|e| taskline::TasklineError::TaskExecutionError(e))?;
+                email
+                    .send_email(
+                        "shopper@example.com",
+                        "Don't Forget Your Cart!",
+                        "You left items in your cart. Complete your purchase now!",
+                    )
+                    .await
+                    .map_err(|e| taskline::TasklineError::TaskExecutionError(e))?;
             }
 
             Ok(())

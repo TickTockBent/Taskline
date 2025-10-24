@@ -135,17 +135,17 @@
 //! - [`Result`] - Convenient result type alias
 
 // Re-export the main components
-pub use crate::scheduler::{Scheduler, SchedulerConfig};
-pub use crate::task::{Task, TaskConfig, TaskStatus, TaskStats, ScheduleType};
 pub use crate::errors::TasklineError;
 pub use crate::events::{EventBus, SchedulerEvent};
+pub use crate::scheduler::{Scheduler, SchedulerConfig};
+pub use crate::task::{ScheduleType, Task, TaskConfig, TaskStats, TaskStatus};
 
 // Main modules
-pub mod scheduler;
-pub mod task;
+mod cron_parser;
 pub mod errors;
 pub mod events;
-mod cron_parser;
+pub mod scheduler;
+pub mod task;
 
 /// Convenient result type alias for Taskline operations.
 ///

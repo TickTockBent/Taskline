@@ -7,12 +7,12 @@
 //! - Service availability checks
 //! - Alert rate limiting and deduplication
 
-use taskline::{Scheduler, Task, SchedulerEvent};
-use std::sync::Arc;
-use std::time::Duration;
-use tokio::sync::RwLock;
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::Duration;
+use taskline::{Scheduler, SchedulerEvent, Task};
+use tokio::sync::RwLock;
 
 #[derive(Clone)]
 struct MonitoringSystem {
@@ -86,7 +86,12 @@ impl AlertManager {
         // Rate limiting: Don't send same alert within 5 minutes
         if let Some(last_sent) = self.alert_cooldowns.get(alert_type) {
             let cooldown = Duration::from_secs(300); // 5 minutes
-            if Utc::now().signed_duration_since(*last_sent).to_std().unwrap_or_default() < cooldown {
+            if Utc::now()
+                .signed_duration_since(*last_sent)
+                .to_std()
+                .unwrap_or_default()
+                < cooldown
+            {
                 return false;
             }
         }
@@ -96,7 +101,10 @@ impl AlertManager {
     fn send_alert(&mut self, alert: Alert) {
         println!("{} Alert: {}", alert.severity.emoji(), alert.title);
         println!("   Message: {}", alert.message);
-        println!("   Value: {:.2}, Threshold: {:.2}", alert.metric_value, alert.threshold);
+        println!(
+            "   Value: {:.2}, Threshold: {:.2}",
+            alert.metric_value, alert.threshold
+        );
         println!("   Time: {}\n", alert.timestamp.format("%Y-%m-%d %H:%M:%S"));
 
         // Record cooldown
@@ -154,7 +162,8 @@ impl SystemMetrics {
             response_time_ms: response_time,
         };
 
-        self.service_status.insert(service_name.to_string(), status.clone());
+        self.service_status
+            .insert(service_name.to_string(), status.clone());
         status
     }
 
@@ -186,7 +195,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         while let Ok(event) = event_receiver.recv().await {
             match event {
-                SchedulerEvent::TaskFailed { task_name, error, .. } => {
+                SchedulerEvent::TaskFailed {
+                    task_name, error, ..
+                } => {
                     eprintln!("⚠️  Monitoring task '{}' failed: {}", task_name, error);
                 }
                 _ => {}
@@ -219,7 +230,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  Error Rate: {:.2}%", final_metrics.error_rate);
 
     let alert_mgr = alerts.read().await;
-    println!("\n🔔 Active Alerts: {}", alert_mgr.get_active_alerts().len());
+    println!(
+        "\n🔔 Active Alerts: {}",
+        alert_mgr.get_active_alerts().len()
+    );
     println!("📜 Total Alerts Sent: {}", alert_mgr.alert_history.len());
 
     scheduler.stop().await?;
@@ -228,7 +242,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn setup_monitoring_tasks(monitoring: &MonitoringSystem) -> Result<(), Box<dyn std::error::Error>> {
+async fn setup_monitoring_tasks(
+    monitoring: &MonitoringSystem,
+) -> Result<(), Box<dyn std::error::Error>> {
     // Task 1: CPU monitoring every 10 seconds
     let metrics_clone = monitoring.metrics.clone();
     let alerts_clone = monitoring.alerts.clone();
@@ -371,8 +387,10 @@ async fn setup_monitoring_tasks(monitoring: &MonitoringSystem) -> Result<(), Box
                 let status = m.check_service(name, endpoint).await;
 
                 let icon = if status.is_healthy { "✅" } else { "❌" };
-                println!("{} Service '{}': {} ({}ms)",
-                    icon, name,
+                println!(
+                    "{} Service '{}': {} ({}ms)",
+                    icon,
+                    name,
                     if status.is_healthy { "UP" } else { "DOWN" },
                     status.response_time_ms
                 );

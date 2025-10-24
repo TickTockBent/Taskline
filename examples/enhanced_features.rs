@@ -7,10 +7,10 @@
 //! - Task cancellation
 //! - Auto-generated task names
 
-use taskline::{Scheduler, Task, SchedulerEvent};
-use std::time::Duration;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::Arc;
+use std::time::Duration;
+use taskline::{Scheduler, SchedulerEvent, Task};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -36,14 +36,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 SchedulerEvent::TaskStarting { task_name, .. } => {
                     println!("▶️  Task starting: {}", task_name);
                 }
-                SchedulerEvent::TaskCompleted { task_name, duration_ms, .. } => {
+                SchedulerEvent::TaskCompleted {
+                    task_name,
+                    duration_ms,
+                    ..
+                } => {
                     println!("✅ Task completed: {} ({}ms)", task_name, duration_ms);
                 }
-                SchedulerEvent::TaskFailed { task_name, error, .. } => {
+                SchedulerEvent::TaskFailed {
+                    task_name, error, ..
+                } => {
                     println!("❌ Task failed: {} - {}", task_name, error);
                 }
-                SchedulerEvent::TaskTimeoutWarning { task_name, percent_complete, .. } => {
-                    println!("⚠️  Task timeout warning: {} ({}%)", task_name, percent_complete);
+                SchedulerEvent::TaskTimeoutWarning {
+                    task_name,
+                    percent_complete,
+                    ..
+                } => {
+                    println!(
+                        "⚠️  Task timeout warning: {} ({}%)",
+                        task_name, percent_complete
+                    );
                 }
                 SchedulerEvent::SchedulerStopped { uptime_seconds, .. } => {
                     println!("🛑 Scheduler stopped after {}s", uptime_seconds);

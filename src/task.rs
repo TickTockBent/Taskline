@@ -3,18 +3,18 @@
 //! This module provides the [`Task`] type and related functionality for creating
 //! and managing schedulable asynchronous tasks.
 
+use chrono::{DateTime, Utc};
+use log::{debug, error, info, warn};
 use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
-use chrono::{DateTime, Utc};
-use log::{debug, error, info, warn};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use crate::errors::TasklineError;
 use crate::cron_parser::CronSchedule;
+use crate::errors::TasklineError;
 use crate::Result;
 
 /// Represents different scheduling types for tasks.
@@ -297,7 +297,6 @@ impl Task {
         }
     }
 
-
     /// Returns the task's unique identifier.
     ///
     /// # Examples
@@ -502,13 +501,16 @@ impl Task {
             "0 0 * * 1" => "Weekly on Monday".to_string(),
             "0 0 1 * *" => "Monthly on First Day".to_string(),
             expr if expr.starts_with("*/") => {
-                if let Some(mins) = expr.strip_prefix("*/").and_then(|s| s.split_whitespace().next()) {
+                if let Some(mins) = expr
+                    .strip_prefix("*/")
+                    .and_then(|s| s.split_whitespace().next())
+                {
                     if let Ok(n) = mins.parse::<u32>() {
                         return format!("Every {} Minutes", n);
                     }
                 }
                 format!("Interval Task ({})", expr)
-            },
+            }
             expr if expr.starts_with("0 */") => {
                 let parts: Vec<&str> = expr.split_whitespace().collect();
                 if parts.len() >= 2 {
@@ -519,7 +521,7 @@ impl Task {
                     }
                 }
                 format!("Scheduled Task ({})", expr)
-            },
+            }
             _ => format!("Scheduled Task ({})", cron_expr),
         }
     }
@@ -576,7 +578,6 @@ impl Task {
         self.stats.lock().await.clone()
     }
 
-
     /// Updates the next execution time based on the task's schedule.
     ///
     /// This is typically called automatically by the scheduler, but can be
@@ -592,7 +593,11 @@ impl Task {
                     // For interval-based schedules, add the interval to the last execution time
                     // or use now if there's no last execution
                     if let Some(last_exec) = stats.last_execution {
-                        Some(last_exec + chrono::Duration::from_std(*interval).unwrap_or(chrono::Duration::seconds(0)))
+                        Some(
+                            last_exec
+                                + chrono::Duration::from_std(*interval)
+                                    .unwrap_or(chrono::Duration::seconds(0)),
+                        )
                     } else {
                         // First execution - schedule it for now
                         Some(now)
@@ -630,49 +635,51 @@ impl Task {
     /// ```
     pub async fn execute(&self) -> Result<()> {
         info!("Executing task: {}", self.name);
-        
+
         // Update status to running
         {
             let mut status = self.status.lock().await;
             *status = TaskStatus::Running;
         }
-        
+
         let start_time = Utc::now();
         let mut result = self.execute_once().await;
         let mut retries = 0;
-        
+
         // Handle retries if needed
         while result.is_err() && retries < self.config.max_retries {
             retries += 1;
-            warn!("Task {} failed, retrying ({}/{}): {:?}", 
-                 self.name, retries, self.config.max_retries, result);
-            
+            warn!(
+                "Task {} failed, retrying ({}/{}): {:?}",
+                self.name, retries, self.config.max_retries, result
+            );
+
             // Wait before retrying
             tokio::time::sleep(self.config.retry_delay).await;
-            
+
             // Try again
             result = self.execute_once().await;
         }
-        
+
         // Calculate execution duration
         let duration = Utc::now()
             .signed_duration_since(start_time)
             .to_std()
             .unwrap_or(Duration::from_secs(0));
-        
+
         // Update statistics
         {
             let mut stats = self.stats.lock().await;
             stats.executions += 1;
             stats.last_execution = Some(start_time);
             stats.total_execution_time += duration;
-            
+
             if stats.executions > 0 {
                 stats.avg_execution_time = Duration::from_nanos(
-                    (stats.total_execution_time.as_nanos() / stats.executions as u128) as u64
+                    (stats.total_execution_time.as_nanos() / stats.executions as u128) as u64,
                 );
             }
-            
+
             // Update success/failure counts based on result
             if result.is_ok() {
                 stats.successes += 1;
@@ -680,7 +687,7 @@ impl Task {
                 stats.failures += 1;
             }
         }
-        
+
         // Update status based on result
         {
             let mut status = self.status.lock().await;
@@ -690,21 +697,23 @@ impl Task {
                 TaskStatus::Failed
             };
         }
-        
+
         // Update next execution time
         self.update_next_execution().await;
-        
+
         // Return the result or error
         if result.is_err() {
-            error!("Task {} failed after {} retries: {:?}", 
-                  self.name, retries, result);
+            error!(
+                "Task {} failed after {} retries: {:?}",
+                self.name, retries, result
+            );
         } else {
             debug!("Task {} completed successfully", self.name);
         }
-        
+
         result
     }
-    
+
     /// Execute the task once with timeout handling, cancellation support, and timeout warnings
     async fn execute_once(&self) -> Result<()> {
         let func = &self.function;
@@ -720,7 +729,8 @@ impl Task {
         let result = match self.config.timeout {
             Some(timeout_duration) => {
                 // Create a warning task that fires at 80% of timeout
-                let warning_duration = Duration::from_nanos((timeout_duration.as_nanos() as f64 * 0.8) as u64);
+                let warning_duration =
+                    Duration::from_nanos((timeout_duration.as_nanos() as f64 * 0.8) as u64);
                 let task_name = self.name.clone();
                 let cancel_for_warning = cancel_token.clone();
 
@@ -765,18 +775,16 @@ impl Task {
 
                 match execution_result {
                     ExecutionOutcome::Completed(result) => result,
-                    ExecutionOutcome::Cancelled => {
-                        Err(TasklineError::TaskExecutionError(
-                            format!("Task '{}' was cancelled", self.name)
-                        ))
-                    }
-                    ExecutionOutcome::TimedOut => {
-                        Err(TasklineError::TaskTimeout(format!(
-                            "Task '{}' timed out after {:?}", self.name, timeout_duration
-                        )))
-                    }
+                    ExecutionOutcome::Cancelled => Err(TasklineError::TaskExecutionError(format!(
+                        "Task '{}' was cancelled",
+                        self.name
+                    ))),
+                    ExecutionOutcome::TimedOut => Err(TasklineError::TaskTimeout(format!(
+                        "Task '{}' timed out after {:?}",
+                        self.name, timeout_duration
+                    ))),
                 }
-            },
+            }
             None => {
                 // No timeout - still support cancellation
                 let task_future = func();
@@ -789,11 +797,12 @@ impl Task {
 
                 match result {
                     Some(r) => r,
-                    None => Err(TasklineError::TaskExecutionError(
-                        format!("Task '{}' was cancelled", self.name)
-                    )),
+                    None => Err(TasklineError::TaskExecutionError(format!(
+                        "Task '{}' was cancelled",
+                        self.name
+                    ))),
                 }
-            },
+            }
         };
 
         // Clear the cancellation token
@@ -829,7 +838,6 @@ impl Task {
         }
     }
 
-
     /// Pauses the task so it won't be executed by the scheduler.
     ///
     /// A paused task remains in the scheduler but won't be executed until
@@ -859,12 +867,12 @@ impl Task {
             *status = TaskStatus::Paused;
             Ok(())
         } else {
-            Err(TasklineError::TaskExecutionError(
-                format!("Cannot pause task '{}' while it is running", self.name)
-            ))
+            Err(TasklineError::TaskExecutionError(format!(
+                "Cannot pause task '{}' while it is running",
+                self.name
+            )))
         }
     }
-
 
     /// Resumes a paused task.
     ///
@@ -896,9 +904,10 @@ impl Task {
             *status = TaskStatus::Idle;
             Ok(())
         } else {
-            Err(TasklineError::TaskExecutionError(
-                format!("Cannot resume task '{}' as it is not paused", self.name)
-            ))
+            Err(TasklineError::TaskExecutionError(format!(
+                "Cannot resume task '{}' as it is not paused",
+                self.name
+            )))
         }
     }
 }
@@ -954,8 +963,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_task_with_name() {
-        let task = Task::new(|| async { Ok(()) })
-            .with_name("Test Task");
+        let task = Task::new(|| async { Ok(()) }).with_name("Test Task");
 
         let debug_str = format!("{:?}", task);
         assert!(debug_str.contains("Test Task"));
@@ -987,7 +995,9 @@ mod tests {
     #[tokio::test]
     async fn test_task_execution_failure() {
         let task = Task::new(|| async {
-            Err(TasklineError::TaskExecutionError("intentional failure".to_string()))
+            Err(TasklineError::TaskExecutionError(
+                "intentional failure".to_string(),
+            ))
         });
 
         let result = task.execute().await;
@@ -1078,9 +1088,7 @@ mod tests {
         let task_clone = Arc::new(task);
         let task_for_pause = Arc::clone(&task_clone);
 
-        tokio::spawn(async move {
-            task_for_pause.execute().await
-        });
+        tokio::spawn(async move { task_for_pause.execute().await });
 
         // Give it a moment to start
         tokio::time::sleep(Duration::from_millis(10)).await;
@@ -1092,8 +1100,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_task_with_schedule() {
-        let task = Task::new(|| async { Ok(()) })
-            .with_schedule("0 0 * * *");
+        let task = Task::new(|| async { Ok(()) }).with_schedule("0 0 * * *");
 
         assert!(task.is_ok());
 
@@ -1119,9 +1126,7 @@ mod tests {
         let task = Arc::new(task);
         let task_clone = Arc::clone(&task);
 
-        tokio::spawn(async move {
-            task_clone.execute().await
-        });
+        tokio::spawn(async move { task_clone.execute().await });
 
         // Give it time to start
         tokio::time::sleep(Duration::from_millis(10)).await;

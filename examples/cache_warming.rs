@@ -7,19 +7,19 @@
 //! - Cache hit rate monitoring
 //! - Predictive cache preloading
 
-use taskline::{Scheduler, Task, SchedulerEvent};
-use std::sync::Arc;
-use std::time::Duration;
-use tokio::sync::RwLock;
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::Duration;
+use taskline::{Scheduler, SchedulerEvent, Task};
+use tokio::sync::RwLock;
 
 #[derive(Clone)]
 struct CacheSystem {
     scheduler: Arc<Scheduler>,
     l1_cache: Arc<RwLock<Cache>>,  // Fast memory cache
     l2_cache: Arc<RwLock<Cache>>,  // Slower distributed cache
-    cdn_cache: Arc<RwLock<Cache>>,  // CDN edge cache
+    cdn_cache: Arc<RwLock<Cache>>, // CDN edge cache
     stats: Arc<RwLock<CacheStats>>,
 }
 
@@ -102,7 +102,8 @@ impl Cache {
 
     async fn evict_lru(&mut self) {
         // Evict least recently used
-        if let Some((key, _)) = self.entries
+        if let Some((key, _)) = self
+            .entries
             .iter()
             .min_by_key(|(_, entry)| entry.last_accessed)
         {
@@ -117,8 +118,10 @@ impl Cache {
         let removed = before - self.entries.len();
 
         if removed > 0 {
-            println!("  🗑️  {}: Invalidated {} entries matching '{}'",
-                self.name, removed, pattern);
+            println!(
+                "  🗑️  {}: Invalidated {} entries matching '{}'",
+                self.name, removed, pattern
+            );
         }
 
         removed
@@ -160,14 +163,14 @@ impl Cache {
     }
 
     fn get_hit_rate(&self) -> f64 {
-        let total = self.entries.values()
-            .map(|e| e.access_count)
-            .sum::<u64>();
+        let total = self.entries.values().map(|e| e.access_count).sum::<u64>();
 
         if total == 0 {
             0.0
         } else {
-            let hits: u64 = self.entries.values()
+            let hits: u64 = self
+                .entries
+                .values()
                 .filter(|e| e.access_count > 0)
                 .map(|e| e.access_count)
                 .sum();
@@ -176,17 +179,18 @@ impl Cache {
     }
 
     fn memory_usage(&self) -> usize {
-        self.entries.values()
-            .map(|e| e.size_bytes)
-            .sum()
+        self.entries.values().map(|e| e.size_bytes).sum()
     }
 }
 
 impl CacheStats {
     fn calculate_overall_hit_rate(&self) -> f64 {
-        let total_requests = self.l1_hits + self.l1_misses +
-            self.l2_hits + self.l2_misses +
-            self.cdn_hits + self.cdn_misses;
+        let total_requests = self.l1_hits
+            + self.l1_misses
+            + self.l2_hits
+            + self.l2_misses
+            + self.cdn_hits
+            + self.cdn_misses;
 
         if total_requests == 0 {
             return 0.0;
@@ -225,7 +229,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 SchedulerEvent::TaskCompleted { task_name, .. } => {
                     // Suppress for cleaner output
                 }
-                SchedulerEvent::TaskFailed { task_name, error, .. } => {
+                SchedulerEvent::TaskFailed {
+                    task_name, error, ..
+                } => {
                     eprintln!("❌ Cache task '{}' failed: {}", task_name, error);
                 }
                 _ => {}
@@ -288,7 +294,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\n  Statistics:");
     println!("    L1 Hits/Misses: {}/{}", s.l1_hits, s.l1_misses);
-    println!("    Overall Hit Rate: {:.2}%", s.calculate_overall_hit_rate());
+    println!(
+        "    Overall Hit Rate: {:.2}%",
+        s.calculate_overall_hit_rate()
+    );
     println!("    Total Warmups: {}", s.total_warmups);
     println!("    Total Evictions: {}", s.total_evictions);
 
@@ -361,7 +370,7 @@ async fn setup_cache_tasks(system: &CacheSystem) -> Result<(), Box<dyn std::erro
             Ok(())
         }
     })
-    .with_schedule("0 23 * * 5")?  // Friday 11 PM
+    .with_schedule("0 23 * * 5")? // Friday 11 PM
     .with_tags(&["cache", "warmup", "sale"]);
 
     system.scheduler.add_task(sale_warmup).await?;
@@ -436,11 +445,20 @@ async fn setup_cache_tasks(system: &CacheSystem) -> Result<(), Box<dyn std::erro
             let stats = s.read().await;
 
             println!("📊 Cache Metrics:");
-            println!("  L1 entries: {}, Memory: {} bytes",
-                l1.entries.len(), l1.memory_usage());
-            println!("  L2 entries: {}, Memory: {} bytes",
-                l2.entries.len(), l2.memory_usage());
-            println!("  Overall hit rate: {:.2}%", stats.calculate_overall_hit_rate());
+            println!(
+                "  L1 entries: {}, Memory: {} bytes",
+                l1.entries.len(),
+                l1.memory_usage()
+            );
+            println!(
+                "  L2 entries: {}, Memory: {} bytes",
+                l2.entries.len(),
+                l2.memory_usage()
+            );
+            println!(
+                "  Overall hit rate: {:.2}%",
+                stats.calculate_overall_hit_rate()
+            );
 
             // Alert if hit rate is low
             if stats.calculate_overall_hit_rate() < 50.0 && stats.l1_hits + stats.l1_misses > 10 {

@@ -3,18 +3,18 @@
 //! This module provides the [`Scheduler`] type which manages a collection of tasks
 //! and executes them according to their cron schedules.
 
+use chrono::{DateTime, Utc};
+use log::{debug, error, info, trace, warn};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
-use chrono::{DateTime, Utc};
-use log::{debug, error, info, trace, warn};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use tokio::time::{self, Instant};
 
 use crate::errors::TasklineError;
-use crate::task::{Task, TaskStatus};
 use crate::events::{EventBus, SchedulerEvent};
+use crate::task::{Task, TaskStatus};
 use crate::Result;
 
 /// Configuration options for the scheduler.
@@ -147,7 +147,6 @@ impl Scheduler {
         Self::with_config(SchedulerConfig::default())
     }
 
-
     /// Creates a new scheduler with custom configuration.
     ///
     /// # Arguments
@@ -199,7 +198,6 @@ impl Scheduler {
     pub fn event_bus(&self) -> &EventBus {
         &self.event_bus
     }
-
 
     /// Adds a task to the scheduler with a cron schedule.
     ///
@@ -295,16 +293,17 @@ impl Scheduler {
             Ok(())
         } else {
             Err(TasklineError::SchedulerError(format!(
-                "Task '{}' not found", task_id
+                "Task '{}' not found",
+                task_id
             )))
         }
     }
-    
+
     /// Get a reference to a task by ID
     pub async fn get_task(&self, task_id: &str) -> Option<Arc<Task>> {
         self.tasks.lock().await.get(task_id).cloned()
     }
-    
+
     /// Get a list of all task IDs
     pub async fn task_ids(&self) -> Vec<String> {
         self.tasks.lock().await.keys().cloned().collect()
@@ -386,7 +385,6 @@ impl Scheduler {
             .collect()
     }
 
-
     /// Starts the scheduler in the background.
     ///
     /// The scheduler begins monitoring tasks and executing them according to their schedules.
@@ -418,10 +416,10 @@ impl Scheduler {
         let mut running = self.running.lock().await;
         if *running {
             return Err(TasklineError::SchedulerError(
-                "Scheduler is already running".to_string()
+                "Scheduler is already running".to_string(),
             ));
         }
-        
+
         // Mark as running and record start time
         *running = true;
         let start_timestamp = Utc::now();
@@ -446,29 +444,31 @@ impl Scheduler {
         // Store the handle
         *self.scheduler_handle.lock().await = Some(handle);
 
-        info!("Scheduler started with check interval of {:?}", self.config.check_interval);
+        info!(
+            "Scheduler started with check interval of {:?}",
+            self.config.check_interval
+        );
         Ok(())
     }
-    
+
     /// Run the scheduler in the foreground (blocks until stopped)
     pub async fn run(&self) -> Result<()> {
         self.start().await?;
-        
+
         // Wait for the scheduler to be stopped
         let handle = {
             let mut handle_lock = self.scheduler_handle.lock().await;
             handle_lock.take()
         };
-        
+
         if let Some(handle) = handle {
             handle.await.map_err(|e| {
                 TasklineError::SchedulerError(format!("Scheduler task failed: {}", e))
             })?;
         }
-        
+
         Ok(())
     }
-
 
     /// Stops the scheduler gracefully.
     ///
@@ -499,7 +499,7 @@ impl Scheduler {
         let mut running = self.running.lock().await;
         if !*running {
             return Err(TasklineError::SchedulerError(
-                "Scheduler is not running".to_string()
+                "Scheduler is not running".to_string(),
             ));
         }
 
@@ -524,9 +524,12 @@ impl Scheduler {
             match tokio::time::timeout(self.config.shutdown_grace_period, handle).await {
                 Ok(result) => {
                     result.map_err(|e| {
-                        TasklineError::SchedulerError(format!("Scheduler task failed during shutdown: {}", e))
+                        TasklineError::SchedulerError(format!(
+                            "Scheduler task failed during shutdown: {}",
+                            e
+                        ))
                     })?;
-                },
+                }
                 Err(_) => {
                     warn!("Scheduler did not shut down within grace period, forcing shutdown");
                 }
@@ -542,7 +545,7 @@ impl Scheduler {
         info!("Scheduler stopped");
         Ok(())
     }
-    
+
     /// The main scheduler loop that checks for and executes due tasks
     async fn scheduler_loop(
         tasks: Arc<Mutex<HashMap<String, Arc<Task>>>>,
@@ -551,10 +554,7 @@ impl Scheduler {
         event_bus: EventBus,
     ) {
         // Interval for periodic checking
-        let mut interval = time::interval_at(
-            Instant::now(),
-            config.check_interval
-        );
+        let mut interval = time::interval_at(Instant::now(), config.check_interval);
 
         // Keep running until stopped
         while *running.lock().await {
@@ -582,7 +582,7 @@ impl Scheduler {
                 .map(|(id, task)| (id.clone(), Arc::clone(task)))
                 .collect()
         };
-        
+
         // Check each task to see if it's due
         for (task_id, task) in task_ids {
             // Skip if task isn't idle
@@ -590,7 +590,7 @@ impl Scheduler {
             if status != TaskStatus::Idle {
                 continue;
             }
-            
+
             // Get next execution time
             let stats = task.stats().await;
             let should_execute = if let Some(next_exec) = stats.next_execution {
@@ -599,22 +599,24 @@ impl Scheduler {
             } else {
                 false
             };
-            
+
             if should_execute {
                 debug!("Task '{}' is due for execution", task_id);
-                
+
                 // Get a clone for the async block
                 let task_clone = Arc::clone(&task);
                 let config_clone = config.clone();
-                
+
                 // Spawn a new task to execute
                 tokio::spawn(async move {
                     if let Err(e) = task_clone.execute().await {
                         error!("Task '{}' execution failed: {:?}", task_id, e);
-                        
+
                         // If configured to stop on errors, stop the scheduler
                         if !config_clone.continue_on_error {
-                            error!("Stopping scheduler due to task failure (continue_on_error=false)");
+                            error!(
+                                "Stopping scheduler due to task failure (continue_on_error=false)"
+                            );
                             // Note: We can't directly stop the scheduler here,
                             // but the main app can check task results and stop if needed
                         }
@@ -623,39 +625,41 @@ impl Scheduler {
             }
         }
     }
-    
+
     /// Update the next execution time for all tasks
     pub async fn update_next_executions(&self) -> Result<()> {
         let tasks = self.tasks.lock().await;
         for task in tasks.values() {
             task.update_next_execution().await;
         }
-        
+
         Ok(())
     }
-    
+
     /// Pause a task by ID
     pub async fn pause_task(&self, task_id: &str) -> Result<()> {
         if let Some(task) = self.get_task(task_id).await {
             task.pause().await
         } else {
             Err(TasklineError::SchedulerError(format!(
-                "Task '{}' not found", task_id
+                "Task '{}' not found",
+                task_id
             )))
         }
     }
-    
+
     /// Resume a paused task by ID
     pub async fn resume_task(&self, task_id: &str) -> Result<()> {
         if let Some(task) = self.get_task(task_id).await {
             task.resume().await
         } else {
             Err(TasklineError::SchedulerError(format!(
-                "Task '{}' not found", task_id
+                "Task '{}' not found",
+                task_id
             )))
         }
     }
-    
+
     /// Get the uptime of the scheduler
     pub async fn uptime(&self) -> Option<chrono::Duration> {
         if let Some(start_time) = *self.start_time.lock().await {
@@ -664,7 +668,7 @@ impl Scheduler {
             None
         }
     }
-    
+
     /// Check if the scheduler is currently running
     pub async fn is_running(&self) -> bool {
         *self.running.lock().await
@@ -690,7 +694,9 @@ mod tests {
     #[test]
     fn test_scheduler_creation() {
         let scheduler = Scheduler::new();
-        assert!(!tokio::runtime::Runtime::new().unwrap().block_on(scheduler.is_running()));
+        assert!(!tokio::runtime::Runtime::new()
+            .unwrap()
+            .block_on(scheduler.is_running()));
     }
 
     #[test]
@@ -705,8 +711,7 @@ mod tests {
     async fn test_add_task() {
         let scheduler = Scheduler::new();
 
-        let task = Task::new(|| async { Ok(()) })
-            .with_name("Test Task");
+        let task = Task::new(|| async { Ok(()) }).with_name("Test Task");
 
         let task_id = scheduler.add("* * * * *", task).await.unwrap();
         assert!(!task_id.is_empty());
@@ -721,8 +726,7 @@ mod tests {
         let scheduler = Scheduler::new();
 
         for i in 0..5 {
-            let task = Task::new(|| async { Ok(()) })
-                .with_name(format!("Task {}", i));
+            let task = Task::new(|| async { Ok(()) }).with_name(format!("Task {}", i));
             scheduler.add("* * * * *", task).await.unwrap();
         }
 
@@ -756,8 +760,7 @@ mod tests {
     async fn test_get_task() {
         let scheduler = Scheduler::new();
 
-        let task = Task::new(|| async { Ok(()) })
-            .with_name("Findable Task");
+        let task = Task::new(|| async { Ok(()) }).with_name("Findable Task");
         let task_id = scheduler.add("* * * * *", task).await.unwrap();
 
         let found_task = scheduler.get_task(&task_id).await;

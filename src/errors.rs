@@ -2,8 +2,8 @@
 //!
 //! This module defines all error types that can occur during scheduler and task operations.
 
-use std::fmt;
 use std::error::Error;
+use std::fmt;
 use std::io;
 
 /// Represents all possible errors that can occur in Taskline operations.
@@ -166,7 +166,7 @@ mod tests {
         match error {
             TasklineError::TaskExecutionError(msg) => {
                 assert_eq!(msg, "test error");
-            },
+            }
             _ => panic!("Expected TaskExecutionError variant"),
         }
     }
