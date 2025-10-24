@@ -43,7 +43,7 @@
 //!     scheduler.add("0 * * * *", Task::new(|| async {
 //!         println!("Running hourly task!");
 //!         Ok(())
-//!     }).with_name("Hourly Task"))?;
+//!     }).with_name("Hourly Task")).await?;
 //!
 //!     // Start the scheduler
 //!     scheduler.start().await?;
@@ -93,7 +93,7 @@
 //!         max_retries: 3,
 //!         retry_delay: Duration::from_secs(5),
 //!         fail_scheduler_on_error: false,
-//!     }))?;
+//!     })).await?;
 //!
 //!     // Add interval-based task
 //!     scheduler.add_task(Task::new(|| async {
@@ -101,7 +101,7 @@
 //!         Ok(())
 //!     })
 //!     .with_interval(Duration::from_secs(300))
-//!     .with_tag("monitoring"))?;
+//!     .with_tag("monitoring")).await?;
 //!
 //!     scheduler.start().await?;
 //!

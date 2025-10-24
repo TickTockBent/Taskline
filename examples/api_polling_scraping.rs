@@ -306,7 +306,7 @@ async fn setup_polling_tasks(system: &ScraperSystem) -> Result<(), Box<dyn std::
     .with_interval(Duration::from_secs(10)) // Demo: 10 seconds
     .with_tags(&["api", "weather", "polling"]);
 
-    system.scheduler.add_task(weather_task)?;
+    system.scheduler.add_task(weather_task).await?;
 
     // Task 2: Stock price monitoring - Every 1 minute
     let data_store = system.data_store.clone();
@@ -336,7 +336,7 @@ async fn setup_polling_tasks(system: &ScraperSystem) -> Result<(), Box<dyn std::
     .with_interval(Duration::from_secs(8)) // Demo: 8 seconds
     .with_tags(&["api", "stocks", "finance", "polling"]);
 
-    system.scheduler.add_task(stock_task)?;
+    system.scheduler.add_task(stock_task).await?;
 
     // Task 3: RSS feed aggregator - Every 15 minutes
     let data_store = system.data_store.clone();
@@ -360,7 +360,7 @@ async fn setup_polling_tasks(system: &ScraperSystem) -> Result<(), Box<dyn std::
     .with_interval(Duration::from_secs(12)) // Demo: 12 seconds
     .with_tags(&["rss", "feed", "news"]);
 
-    system.scheduler.add_task(rss_task)?;
+    system.scheduler.add_task(rss_task).await?;
 
     // Task 4: Product price tracker - Every 2 hours
     let data_store = system.data_store.clone();
@@ -397,7 +397,7 @@ async fn setup_polling_tasks(system: &ScraperSystem) -> Result<(), Box<dyn std::
         fail_scheduler_on_error: false,
     });
 
-    system.scheduler.add_task(price_tracker)?;
+    system.scheduler.add_task(price_tracker).await?;
 
     // Task 5: API health check - Every 5 minutes
     let health_check = Task::new(|| async {
@@ -427,7 +427,7 @@ async fn setup_polling_tasks(system: &ScraperSystem) -> Result<(), Box<dyn std::
     .with_interval(Duration::from_secs(20))
     .with_tags(&["monitoring", "health", "api"]);
 
-    system.scheduler.add_task(health_check)?;
+    system.scheduler.add_task(health_check).await?;
 
     Ok(())
 }

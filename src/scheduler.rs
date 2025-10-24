@@ -86,7 +86,7 @@ impl Default for SchedulerConfig {
 ///     scheduler.add("0 * * * *", Task::new(|| async {
 ///         println!("Hourly task");
 ///         Ok(())
-///     }))?;
+///     })).await?;
 ///
 ///     // Start scheduler
 ///     scheduler.start().await?;
@@ -217,29 +217,32 @@ impl Scheduler {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```no_run
     /// use taskline::{Scheduler, Task};
     ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let scheduler = Scheduler::new();
     ///
     /// let task_id = scheduler.add("0 * * * *", Task::new(|| async {
     ///     println!("Running hourly");
     ///     Ok(())
-    /// })).unwrap();
+    /// })).await?;
     ///
     /// println!("Added task with ID: {}", task_id);
+    /// # Ok(())
+    /// # }
     /// ```
     ///
     /// # Errors
     ///
     /// Returns [`TasklineError::CronParseError`] if the cron expression is invalid.
-    pub fn add(&self, cron_expr: &str, task: Task) -> Result<String> {
+    pub async fn add(&self, cron_expr: &str, task: Task) -> Result<String> {
         let task = task.with_schedule(cron_expr)?;
         let task_id = task.id().to_string();
         let task_name = task.name().to_string();
 
         let task_arc = Arc::new(task);
-        let mut tasks = self.tasks.blocking_lock();
+        let mut tasks = self.tasks.lock().await;
         tasks.insert(task_id.clone(), task_arc);
 
         debug!("Added task '{}' with schedule '{}'", task_id, cron_expr);
@@ -253,14 +256,14 @@ impl Scheduler {
 
         Ok(task_id)
     }
-    
+
     /// Add a pre-configured task to the scheduler
-    pub fn add_task(&self, task: Task) -> Result<String> {
+    pub async fn add_task(&self, task: Task) -> Result<String> {
         let task_id = task.id().to_string();
         let task_name = task.name().to_string();
         let task_arc = Arc::new(task);
 
-        let mut tasks = self.tasks.blocking_lock();
+        let mut tasks = self.tasks.lock().await;
         tasks.insert(task_id.clone(), task_arc);
 
         debug!("Added task '{}'", task_id);
@@ -276,8 +279,8 @@ impl Scheduler {
     }
 
     /// Remove a task from the scheduler
-    pub fn remove(&self, task_id: &str) -> Result<()> {
-        let mut tasks = self.tasks.blocking_lock();
+    pub async fn remove(&self, task_id: &str) -> Result<()> {
+        let mut tasks = self.tasks.lock().await;
         if let Some(task) = tasks.remove(task_id) {
             let task_name = task.name().to_string();
             debug!("Removed task '{}'", task_id);
@@ -705,7 +708,7 @@ mod tests {
         let task = Task::new(|| async { Ok(()) })
             .with_name("Test Task");
 
-        let task_id = scheduler.add("* * * * *", task).unwrap();
+        let task_id = scheduler.add("* * * * *", task).await.unwrap();
         assert!(!task_id.is_empty());
 
         let task_ids = scheduler.task_ids().await;
@@ -720,7 +723,7 @@ mod tests {
         for i in 0..5 {
             let task = Task::new(|| async { Ok(()) })
                 .with_name(format!("Task {}", i));
-            scheduler.add("* * * * *", task).unwrap();
+            scheduler.add("* * * * *", task).await.unwrap();
         }
 
         let task_ids = scheduler.task_ids().await;
@@ -732,9 +735,9 @@ mod tests {
         let scheduler = Scheduler::new();
 
         let task = Task::new(|| async { Ok(()) });
-        let task_id = scheduler.add("* * * * *", task).unwrap();
+        let task_id = scheduler.add("* * * * *", task).await.unwrap();
 
-        let result = scheduler.remove(&task_id);
+        let result = scheduler.remove(&task_id).await;
         assert!(result.is_ok());
 
         let task_ids = scheduler.task_ids().await;
@@ -745,7 +748,7 @@ mod tests {
     async fn test_remove_nonexistent_task() {
         let scheduler = Scheduler::new();
 
-        let result = scheduler.remove("nonexistent-id");
+        let result = scheduler.remove("nonexistent-id").await;
         assert!(result.is_err());
     }
 
@@ -755,7 +758,7 @@ mod tests {
 
         let task = Task::new(|| async { Ok(()) })
             .with_name("Findable Task");
-        let task_id = scheduler.add("* * * * *", task).unwrap();
+        let task_id = scheduler.add("* * * * *", task).await.unwrap();
 
         let found_task = scheduler.get_task(&task_id).await;
         assert!(found_task.is_some());
@@ -824,7 +827,7 @@ mod tests {
         .with_schedule("* * * * *")
         .unwrap();
 
-        scheduler.add_task(task).unwrap();
+        scheduler.add_task(task).await.unwrap();
         scheduler.update_next_executions().await.unwrap();
 
         scheduler.start().await.unwrap();
@@ -859,7 +862,7 @@ mod tests {
         let scheduler = Scheduler::new();
 
         let task = Task::new(|| async { Ok(()) });
-        let task_id = scheduler.add("* * * * *", task).unwrap();
+        let task_id = scheduler.add("* * * * *", task).await.unwrap();
 
         let result = scheduler.pause_task(&task_id).await;
         assert!(result.is_ok());
@@ -913,7 +916,7 @@ mod tests {
             .with_schedule("0 0 * * *")
             .unwrap();
 
-        let task_id = scheduler.add_task(task).unwrap();
+        let task_id = scheduler.add_task(task).await.unwrap();
 
         scheduler.update_next_executions().await.unwrap();
 

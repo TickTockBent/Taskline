@@ -19,31 +19,31 @@ async fn main() -> Result<(), Box<dyn Error>> {
     scheduler.add("* * * * *", Task::new(|| async {
         info!("Executing task: every minute");
         Ok(())
-    }).with_name("Every Minute Task"))?;
+    }).with_name("Every Minute Task")).await?;
     
     // Add a task that runs every 5 minutes
     scheduler.add("*/5 * * * *", Task::new(|| async {
         info!("Executing task: every 5 minutes");
-        
+
         // Simulate some work
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-        
+
         Ok(())
-    }).with_name("Every 5 Minutes Task"))?;
+    }).with_name("Every 5 Minutes Task")).await?;
     
     // Add a task that runs hourly
     scheduler.add("0 * * * *", Task::new(|| async {
         info!("Executing task: hourly task");
-        
+
         // Simulate work with potential errors
         if rand::random::<bool>() {
             info!("Hourly task completed successfully");
             Ok(())
         } else {
             // This will trigger retries based on task configuration
-            Err("Simulated random failure".into())
+            Err("Simulated random failure".to_string().into())
         }
-    }).with_name("Hourly Task"))?;
+    }).with_name("Hourly Task")).await?;
     
     // Update the next execution time for all tasks
     scheduler.update_next_executions().await?;

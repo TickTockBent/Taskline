@@ -68,7 +68,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         max_retries: 5,
         retry_delay: Duration::from_secs(1),
         fail_scheduler_on_error: false,
-    }))?;
+    })).await?;
     
     // Add a task that monitors the counter
     let counter_clone = Arc::clone(&counter);
@@ -77,36 +77,36 @@ async fn main() -> Result<(), Box<dyn Error>> {
         async move {
             let value = counter.get().await;
             info!("Counter monitor: current value = {}", value);
-            
+
             if value > 10 {
                 warn!("Counter exceeded threshold of 10!");
             }
-            
+
             Ok(())
         }
     })
-    .with_name("Counter Monitor"))?;
+    .with_name("Counter Monitor")).await?;
     
     // Add a task that sometimes fails to demonstrate error handling
     scheduler.add("*/3 * * * *", Task::new(|| async {
         info!("Running potentially failing task");
-        
+
         // Simulate work
         tokio::time::sleep(Duration::from_secs(1)).await;
-        
+
         // Randomly succeed or fail
         let random_value = rand::random::<f32>();
-        
+
         if random_value < 0.3 {
             // 30% chance of failure
             error!("Task simulation failed with random value: {}", random_value);
-            Err("Simulated random failure".into())
+            Err("Simulated random failure".to_string().into())
         } else {
             info!("Task simulation succeeded with random value: {}", random_value);
             Ok(())
         }
     })
-    .with_name("Flakey Task"))?;
+    .with_name("Flakey Task")).await?;
     
     // Add a task that demonstrates manual execution and pausing
     let mut_task = Task::new(|| async {
@@ -116,7 +116,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     .with_name("Manual Control Task");
     
     // We don't set a schedule, so this task won't run automatically
-    let manual_task_id = scheduler.add_task(mut_task)?;
+    let manual_task_id = scheduler.add_task(mut_task).await?;
     
     // Start the scheduler
     scheduler.start().await?;

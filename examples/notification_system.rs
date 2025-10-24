@@ -11,7 +11,7 @@ use taskline::{Scheduler, Task, TaskConfig, SchedulerEvent};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
-use chrono::{DateTime, Utc, Weekday};
+use chrono::{DateTime, Utc};
 use std::collections::VecDeque;
 
 #[derive(Clone)]
@@ -82,7 +82,7 @@ impl EmailService {
         }
     }
 
-    async fn send_email(&mut self, to: &str, subject: &str, body: &str) -> Result<(), String> {
+    async fn send_email(&mut self, to: &str, subject: &str, _body: &str) -> Result<(), String> {
         // Simulate sending email
         tokio::time::sleep(Duration::from_millis(100)).await;
 
@@ -122,7 +122,8 @@ impl EmailService {
     }
 
     async fn send_bulk_email(&mut self, recipients: Vec<&str>, subject: &str, body: &str) -> Result<usize, String> {
-        println!("📧 Sending bulk email to {} recipient(s)...", recipients.len());
+        let total_count = recipients.len();
+        println!("📧 Sending bulk email to {} recipient(s)...", total_count);
 
         let mut sent_count = 0;
         for recipient in recipients {
@@ -133,7 +134,7 @@ impl EmailService {
             tokio::time::sleep(Duration::from_millis(50)).await;
         }
 
-        println!("✅ Bulk send complete: {}/{} successful", sent_count, recipients.len());
+        println!("✅ Bulk send complete: {}/{} successful", sent_count, total_count);
         Ok(sent_count)
     }
 
@@ -295,7 +296,7 @@ async fn setup_notification_tasks(system: &NotificationSystem) -> Result<(), Box
     .with_schedule("0 8 * * *")?
     .with_tags(&["email", "digest", "daily"]);
 
-    system.scheduler.add_task(daily_digest)?;
+    system.scheduler.add_task(daily_digest).await?;
 
     // Task 2: Weekly report - Every Monday at 9 AM
     let email_service = system.email_service.clone();
@@ -315,7 +316,7 @@ async fn setup_notification_tasks(system: &NotificationSystem) -> Result<(), Box
     .with_schedule("0 9 * * 1")?  // Monday at 9 AM
     .with_tags(&["email", "report", "weekly"]);
 
-    system.scheduler.add_task(weekly_report)?;
+    system.scheduler.add_task(weekly_report).await?;
 
     // Task 3: Reminder notifications - Every hour
     let email_service = system.email_service.clone();
@@ -341,7 +342,7 @@ async fn setup_notification_tasks(system: &NotificationSystem) -> Result<(), Box
     .with_interval(Duration::from_secs(12)) // Demo: 12 seconds
     .with_tags(&["reminder", "notification"]);
 
-    system.scheduler.add_task(reminders)?;
+    system.scheduler.add_task(reminders).await?;
 
     // Task 4: Process notification queue - Every 30 seconds
     let queue = system.notification_queue.clone();
@@ -358,7 +359,7 @@ async fn setup_notification_tasks(system: &NotificationSystem) -> Result<(), Box
     .with_interval(Duration::from_secs(8)) // Demo: 8 seconds
     .with_tags(&["queue", "notification", "processing"]);
 
-    system.scheduler.add_task(queue_processor)?;
+    system.scheduler.add_task(queue_processor).await?;
 
     // Task 5: Marketing campaign - Weekly on Thursday at 10 AM
     let email_service = system.email_service.clone();
@@ -391,7 +392,7 @@ async fn setup_notification_tasks(system: &NotificationSystem) -> Result<(), Box
         fail_scheduler_on_error: false,
     });
 
-    system.scheduler.add_task(marketing_campaign)?;
+    system.scheduler.add_task(marketing_campaign).await?;
 
     // Task 6: Abandoned cart reminders - Every 6 hours
     let email_service = system.email_service.clone();
@@ -417,7 +418,7 @@ async fn setup_notification_tasks(system: &NotificationSystem) -> Result<(), Box
     .with_interval(Duration::from_secs(15)) // Demo: 15 seconds
     .with_tags(&["ecommerce", "cart", "reminder"]);
 
-    system.scheduler.add_task(cart_reminders)?;
+    system.scheduler.add_task(cart_reminders).await?;
 
     // Task 7: System alerts - Immediate processing
     let queue = system.notification_queue.clone();
@@ -445,7 +446,7 @@ async fn setup_notification_tasks(system: &NotificationSystem) -> Result<(), Box
     .with_interval(Duration::from_secs(10))
     .with_tags(&["alerts", "monitoring"]);
 
-    system.scheduler.add_task(alert_processor)?;
+    system.scheduler.add_task(alert_processor).await?;
 
     Ok(())
 }

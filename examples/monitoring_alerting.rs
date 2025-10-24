@@ -277,7 +277,7 @@ async fn setup_monitoring_tasks(monitoring: &MonitoringSystem) -> Result<(), Box
     .with_interval(Duration::from_secs(10))
     .with_tags(&["monitoring", "cpu", "metrics"]);
 
-    monitoring.scheduler.add_task(cpu_monitor)?;
+    monitoring.scheduler.add_task(cpu_monitor).await?;
 
     // Task 2: Memory monitoring every 10 seconds
     let metrics_clone = monitoring.metrics.clone();
@@ -313,7 +313,7 @@ async fn setup_monitoring_tasks(monitoring: &MonitoringSystem) -> Result<(), Box
     .with_interval(Duration::from_secs(10))
     .with_tags(&["monitoring", "memory", "metrics"]);
 
-    monitoring.scheduler.add_task(memory_monitor)?;
+    monitoring.scheduler.add_task(memory_monitor).await?;
 
     // Task 3: Disk space monitoring every 5 minutes
     let metrics_clone = monitoring.metrics.clone();
@@ -349,7 +349,7 @@ async fn setup_monitoring_tasks(monitoring: &MonitoringSystem) -> Result<(), Box
     .with_interval(Duration::from_secs(15))
     .with_tags(&["monitoring", "disk", "storage"]);
 
-    monitoring.scheduler.add_task(disk_monitor)?;
+    monitoring.scheduler.add_task(disk_monitor).await?;
 
     // Task 4: Service health checks every 30 seconds
     let metrics_clone = monitoring.metrics.clone();
@@ -401,7 +401,7 @@ async fn setup_monitoring_tasks(monitoring: &MonitoringSystem) -> Result<(), Box
     .with_interval(Duration::from_secs(30))
     .with_tags(&["monitoring", "health", "services"]);
 
-    monitoring.scheduler.add_task(health_check)?;
+    monitoring.scheduler.add_task(health_check).await?;
 
     // Task 5: Error log analysis every 2 minutes
     let metrics_clone = monitoring.metrics.clone();
@@ -437,7 +437,7 @@ async fn setup_monitoring_tasks(monitoring: &MonitoringSystem) -> Result<(), Box
     .with_interval(Duration::from_secs(12))
     .with_tags(&["monitoring", "logs", "errors"]);
 
-    monitoring.scheduler.add_task(log_analyzer)?;
+    monitoring.scheduler.add_task(log_analyzer).await?;
 
     Ok(())
 }

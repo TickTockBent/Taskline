@@ -319,7 +319,7 @@ async fn setup_maintenance_tasks(db: &DatabaseManager) -> Result<(), Box<dyn std
         fail_scheduler_on_error: false,
     });
 
-    db.scheduler.add_task(full_backup_task)?;
+    db.scheduler.add_task(full_backup_task).await?;
 
     // Task 2: Incremental backup - Every 6 hours
     let backup_mgr = db.backup_manager.clone();
@@ -336,7 +336,7 @@ async fn setup_maintenance_tasks(db: &DatabaseManager) -> Result<(), Box<dyn std
     .with_interval(Duration::from_secs(15)) // Demo: 15 seconds
     .with_tags(&["backup", "database"]);
 
-    db.scheduler.add_task(incremental_backup_task)?;
+    db.scheduler.add_task(incremental_backup_task).await?;
 
     // Task 3: Vacuum database - Weekly on Sunday at 3 AM
     let pool = db.connection_pool.clone();
@@ -353,7 +353,7 @@ async fn setup_maintenance_tasks(db: &DatabaseManager) -> Result<(), Box<dyn std
     .with_schedule("0 3 * * 0")?
     .with_tags(&["maintenance", "vacuum", "weekly"]);
 
-    db.scheduler.add_task(vacuum_task)?;
+    db.scheduler.add_task(vacuum_task).await?;
 
     // Task 4: Rebuild indexes - Monthly on first day at 4 AM
     let pool = db.connection_pool.clone();
@@ -370,7 +370,7 @@ async fn setup_maintenance_tasks(db: &DatabaseManager) -> Result<(), Box<dyn std
     .with_schedule("0 4 1 * *")?
     .with_tags(&["maintenance", "indexes", "monthly"]);
 
-    db.scheduler.add_task(index_rebuild_task)?;
+    db.scheduler.add_task(index_rebuild_task).await?;
 
     // Task 5: Update statistics - Daily at 1 AM
     let pool = db.connection_pool.clone();
@@ -387,7 +387,7 @@ async fn setup_maintenance_tasks(db: &DatabaseManager) -> Result<(), Box<dyn std
     .with_interval(Duration::from_secs(20)) // Demo: 20 seconds
     .with_tags(&["maintenance", "statistics"]);
 
-    db.scheduler.add_task(stats_task)?;
+    db.scheduler.add_task(stats_task).await?;
 
     // Task 6: Purge old logs - Daily at 5 AM
     let pool = db.connection_pool.clone();
@@ -404,7 +404,7 @@ async fn setup_maintenance_tasks(db: &DatabaseManager) -> Result<(), Box<dyn std
     .with_schedule("0 5 * * *")?
     .with_tags(&["cleanup", "logs", "daily"]);
 
-    db.scheduler.add_task(purge_task)?;
+    db.scheduler.add_task(purge_task).await?;
 
     // Task 7: Archive old orders - Weekly
     let pool = db.connection_pool.clone();
@@ -421,7 +421,7 @@ async fn setup_maintenance_tasks(db: &DatabaseManager) -> Result<(), Box<dyn std
     .with_interval(Duration::from_secs(25)) // Demo: 25 seconds
     .with_tags(&["archival", "orders", "weekly"]);
 
-    db.scheduler.add_task(archive_task)?;
+    db.scheduler.add_task(archive_task).await?;
 
     // Task 8: Check table bloat - Daily
     let pool = db.connection_pool.clone();
@@ -438,7 +438,7 @@ async fn setup_maintenance_tasks(db: &DatabaseManager) -> Result<(), Box<dyn std
     .with_interval(Duration::from_secs(18)) // Demo: 18 seconds
     .with_tags(&["monitoring", "bloat", "health"]);
 
-    db.scheduler.add_task(bloat_check_task)?;
+    db.scheduler.add_task(bloat_check_task).await?;
 
     // Task 9: Cleanup old backups - Weekly
     let backup_mgr = db.backup_manager.clone();
@@ -455,7 +455,7 @@ async fn setup_maintenance_tasks(db: &DatabaseManager) -> Result<(), Box<dyn std
     .with_schedule("0 6 * * 0")?
     .with_tags(&["cleanup", "backup", "weekly"]);
 
-    db.scheduler.add_task(backup_cleanup_task)?;
+    db.scheduler.add_task(backup_cleanup_task).await?;
 
     Ok(())
 }

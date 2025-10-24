@@ -11,8 +11,8 @@ async fn test_full_scheduler_lifecycle() {
     let task1 = Task::new(|| async { Ok(()) }).with_name("Task 1");
     let task2 = Task::new(|| async { Ok(()) }).with_name("Task 2");
 
-    let id1 = scheduler.add("* * * * *", task1).unwrap();
-    let id2 = scheduler.add("*/5 * * * *", task2).unwrap();
+    let id1 = scheduler.add("* * * * *", task1).await.unwrap();
+    let id2 = scheduler.add("*/5 * * * *", task2).await.unwrap();
 
     // Start scheduler
     scheduler.start().await.unwrap();
@@ -67,7 +67,7 @@ async fn test_error_handling_and_retries() {
         async move {
             let count = counter.fetch_add(1, Ordering::SeqCst);
             if count < 2 {
-                Err("Intentional failure".into())
+                Err("Intentional failure".to_string().into())
             } else {
                 Ok(())
             }
@@ -128,7 +128,7 @@ async fn test_task_pause_resume_workflow() {
     })
     .with_name("Pausable Task");
 
-    let task_id = scheduler.add("* * * * *", task).unwrap();
+    let task_id = scheduler.add("* * * * *", task).await.unwrap();
 
     // Pause task
     scheduler.pause_task(&task_id).await.unwrap();
@@ -156,7 +156,7 @@ async fn test_scheduler_with_custom_config() {
     let scheduler = Scheduler::with_config(config);
 
     let task = Task::new(|| async { Ok(()) });
-    scheduler.add("* * * * *", task).unwrap();
+    scheduler.add("* * * * *", task).await.unwrap();
 
     scheduler.start().await.unwrap();
     tokio::time::sleep(Duration::from_millis(100)).await;
@@ -171,8 +171,8 @@ async fn test_multiple_schedulers_independently() {
     let task1 = Task::new(|| async { Ok(()) }).with_name("Scheduler 1 Task");
     let task2 = Task::new(|| async { Ok(()) }).with_name("Scheduler 2 Task");
 
-    scheduler1.add("* * * * *", task1).unwrap();
-    scheduler2.add("* * * * *", task2).unwrap();
+    scheduler1.add("* * * * *", task1).await.unwrap();
+    scheduler2.add("* * * * *", task2).await.unwrap();
 
     scheduler1.start().await.unwrap();
     scheduler2.start().await.unwrap();
@@ -252,12 +252,12 @@ async fn test_task_removal_from_scheduler() {
     let task1 = Task::new(|| async { Ok(()) }).with_name("Task 1");
     let task2 = Task::new(|| async { Ok(()) }).with_name("Task 2");
 
-    let id1 = scheduler.add("* * * * *", task1).unwrap();
-    let id2 = scheduler.add("* * * * *", task2).unwrap();
+    let id1 = scheduler.add("* * * * *", task1).await.unwrap();
+    let id2 = scheduler.add("* * * * *", task2).await.unwrap();
 
     assert_eq!(scheduler.task_ids().await.len(), 2);
 
-    scheduler.remove(&id1).unwrap();
+    scheduler.remove(&id1).await.unwrap();
     assert_eq!(scheduler.task_ids().await.len(), 1);
 
     assert!(scheduler.get_task(&id1).await.is_none());

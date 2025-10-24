@@ -272,7 +272,7 @@ impl Task {
     /// let task = Task::new(|| async {
     ///     // Do work...
     ///     if false {
-    ///         return Err("Something went wrong".into());
+    ///         return Err("Something went wrong".to_string().into());
     ///     }
     ///     Ok(())
     /// });

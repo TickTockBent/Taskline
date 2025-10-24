@@ -334,7 +334,7 @@ async fn setup_cache_tasks(system: &CacheSystem) -> Result<(), Box<dyn std::erro
     .with_schedule("0 7 * * *")?
     .with_tags(&["cache", "warmup", "morning"]);
 
-    system.scheduler.add_task(morning_warmup)?;
+    system.scheduler.add_task(morning_warmup).await?;
 
     // Task 2: Predictive warmup before sale - Every Friday at 11 PM
     let cdn = system.cdn_cache.clone();
@@ -364,7 +364,7 @@ async fn setup_cache_tasks(system: &CacheSystem) -> Result<(), Box<dyn std::erro
     .with_schedule("0 23 * * 5")?  // Friday 11 PM
     .with_tags(&["cache", "warmup", "sale"]);
 
-    system.scheduler.add_task(sale_warmup)?;
+    system.scheduler.add_task(sale_warmup).await?;
 
     // Task 3: Cleanup expired entries - Every hour
     let l1 = system.l1_cache.clone();
@@ -393,7 +393,7 @@ async fn setup_cache_tasks(system: &CacheSystem) -> Result<(), Box<dyn std::erro
     .with_interval(Duration::from_secs(15)) // Demo: 15 seconds
     .with_tags(&["cache", "cleanup", "maintenance"]);
 
-    system.scheduler.add_task(cleanup_task)?;
+    system.scheduler.add_task(cleanup_task).await?;
 
     // Task 4: Cache invalidation after deployments - Manual trigger simulation
     let l1 = system.l1_cache.clone();
@@ -420,7 +420,7 @@ async fn setup_cache_tasks(system: &CacheSystem) -> Result<(), Box<dyn std::erro
     .with_interval(Duration::from_secs(20))
     .with_tags(&["cache", "invalidation"]);
 
-    system.scheduler.add_task(invalidation_task)?;
+    system.scheduler.add_task(invalidation_task).await?;
 
     // Task 5: Monitor cache hit rates - Every 5 minutes
     let l1 = system.l1_cache.clone();
@@ -454,7 +454,7 @@ async fn setup_cache_tasks(system: &CacheSystem) -> Result<(), Box<dyn std::erro
     .with_interval(Duration::from_secs(10)) // Demo: 10 seconds
     .with_tags(&["cache", "monitoring", "metrics"]);
 
-    system.scheduler.add_task(monitoring_task)?;
+    system.scheduler.add_task(monitoring_task).await?;
 
     // Task 6: Warm frequently accessed items - Every 30 minutes
     let l1 = system.l1_cache.clone();
@@ -485,7 +485,7 @@ async fn setup_cache_tasks(system: &CacheSystem) -> Result<(), Box<dyn std::erro
     .with_interval(Duration::from_secs(18))
     .with_tags(&["cache", "warmup", "trending"]);
 
-    system.scheduler.add_task(frequent_warmup)?;
+    system.scheduler.add_task(frequent_warmup).await?;
 
     Ok(())
 }

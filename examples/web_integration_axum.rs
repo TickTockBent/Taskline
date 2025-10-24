@@ -161,7 +161,7 @@ async fn setup_scheduled_tasks(state: &AppState) -> Result<(), Box<dyn std::erro
     .with_interval(Duration::from_secs(30))
     .with_tags(&["monitoring", "health", "critical"]);
 
-    state.scheduler.add_task(health_check_task)?;
+    state.scheduler.add_task(health_check_task).await?;
 
     // Task 2: Cleanup old database sessions every 5 minutes
     let db_pool_clone = state.database_pool.clone();
@@ -187,7 +187,7 @@ async fn setup_scheduled_tasks(state: &AppState) -> Result<(), Box<dyn std::erro
         fail_scheduler_on_error: false,
     });
 
-    state.scheduler.add_task(cleanup_task)?;
+    state.scheduler.add_task(cleanup_task).await?;
 
     // Task 3: Database optimization - daily at 2 AM
     let db_pool_clone = state.database_pool.clone();
@@ -207,7 +207,7 @@ async fn setup_scheduled_tasks(state: &AppState) -> Result<(), Box<dyn std::erro
     .with_schedule("0 2 * * *")?  // Daily at 2 AM
     .with_tags(&["database", "optimization", "nightly"]);
 
-    state.scheduler.add_task(optimize_task)?;
+    state.scheduler.add_task(optimize_task).await?;
 
     // Task 4: Database backup - daily at 3 AM
     let db_pool_clone = state.database_pool.clone();
@@ -227,7 +227,7 @@ async fn setup_scheduled_tasks(state: &AppState) -> Result<(), Box<dyn std::erro
     .with_schedule("0 3 * * *")?  // Daily at 3 AM
     .with_tags(&["database", "backup", "critical"]);
 
-    state.scheduler.add_task(backup_task)?;
+    state.scheduler.add_task(backup_task).await?;
 
     // Task 5: Metrics aggregation every minute
     let metrics_clone = state.metrics.clone();
@@ -250,7 +250,7 @@ async fn setup_scheduled_tasks(state: &AppState) -> Result<(), Box<dyn std::erro
     .with_interval(Duration::from_secs(60))
     .with_tags(&["metrics", "monitoring"]);
 
-    state.scheduler.add_task(metrics_task)?;
+    state.scheduler.add_task(metrics_task).await?;
 
     // Task 6: Session cleanup warning at 80% timeout
     let warning_task = Task::new(|| async {
@@ -268,7 +268,7 @@ async fn setup_scheduled_tasks(state: &AppState) -> Result<(), Box<dyn std::erro
         fail_scheduler_on_error: false,
     });
 
-    state.scheduler.add_task(warning_task)?;
+    state.scheduler.add_task(warning_task).await?;
 
     Ok(())
 }

@@ -70,7 +70,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .with_interval(Duration::from_secs(2))
     .with_tags(&["demo", "interval"]);
 
-    scheduler.add_task(task1)?;
+    scheduler.add_task(task1).await?;
 
     // Example 2: Cron-based task with custom name and tags
     println!("2. Creating cron-based task with tags...");
@@ -83,7 +83,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .with_schedule("*/3 * * * *")? // Every 3 minutes (for demo purposes)
     .with_tags(&["backup", "database", "critical"]);
 
-    scheduler.add_task(task2)?;
+    scheduler.add_task(task2).await?;
 
     // Example 3: Task with timeout and warning
     println!("3. Creating task with timeout warning...");
@@ -97,7 +97,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .with_interval(Duration::from_secs(15))
     .with_tag("analytics");
 
-    scheduler.add_task(task3)?;
+    scheduler.add_task(task3).await?;
 
     // Example 4: Cancellable task
     println!("4. Creating cancellable task...");
@@ -113,7 +113,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .with_interval(Duration::from_secs(20))
     .with_tag("demo");
 
-    let task4_id = scheduler.add_task(task4)?;
+    let task4_id = scheduler.add_task(task4).await?;
 
     println!("\n▶️  Starting scheduler...\n");
     scheduler.start().await?;
