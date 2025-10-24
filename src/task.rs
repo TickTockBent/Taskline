@@ -11,7 +11,6 @@ use std::time::Duration;
 use chrono::{DateTime, Utc};
 use log::{debug, error, info, warn};
 use tokio::sync::Mutex;
-use tokio::time::timeout;
 use uuid::Uuid;
 
 use crate::errors::TasklineError;
@@ -742,15 +741,21 @@ impl Task {
                 let task_future = func();
                 let cancel_for_exec = cancel_token.clone();
 
+                enum ExecutionOutcome {
+                    Completed(Result<()>),
+                    Cancelled,
+                    TimedOut,
+                }
+
                 let execution_result = tokio::select! {
-                    result = task_future => Some(result),
+                    result = task_future => ExecutionOutcome::Completed(result),
                     _ = cancel_for_exec.cancelled() => {
                         debug!("Task '{}' was cancelled during execution", self.name);
-                        None
+                        ExecutionOutcome::Cancelled
                     }
                     _ = tokio::time::sleep(timeout_duration) => {
                         // Timeout occurred
-                        None
+                        ExecutionOutcome::TimedOut
                     }
                 };
 
@@ -759,17 +764,16 @@ impl Task {
                 let _ = warning_handle.await;
 
                 match execution_result {
-                    Some(result) => result,
-                    None => {
-                        if cancel_for_exec.is_cancelled() {
-                            Err(TasklineError::TaskExecutionError(
-                                format!("Task '{}' was cancelled", self.name)
-                            ))
-                        } else {
-                            Err(TasklineError::TaskTimeout(format!(
-                                "Task '{}' timed out after {:?}", self.name, timeout_duration
-                            )))
-                        }
+                    ExecutionOutcome::Completed(result) => result,
+                    ExecutionOutcome::Cancelled => {
+                        Err(TasklineError::TaskExecutionError(
+                            format!("Task '{}' was cancelled", self.name)
+                        ))
+                    }
+                    ExecutionOutcome::TimedOut => {
+                        Err(TasklineError::TaskTimeout(format!(
+                            "Task '{}' timed out after {:?}", self.name, timeout_duration
+                        )))
                     }
                 }
             },

@@ -65,8 +65,16 @@ impl CronSchedule {
     /// Returns [`TasklineError::CronParseError`] if the expression is invalid.
     pub fn new(expression: &str) -> Result<Self, TasklineError> {
         debug!("Parsing cron expression: {}", expression);
-        
-        let schedule = match Schedule::from_str(expression) {
+
+        // The cron crate expects 6 or 7 fields (seconds minute hour day month dayofweek [year])
+        // Convert traditional 5-field cron to 6-field by prepending "0" for seconds
+        let cron_expr = if expression.split_whitespace().count() == 5 {
+            format!("0 {}", expression)
+        } else {
+            expression.to_string()
+        };
+
+        let schedule = match Schedule::from_str(&cron_expr) {
             Ok(schedule) => schedule,
             Err(e) => {
                 return Err(TasklineError::CronParseError(
@@ -74,7 +82,7 @@ impl CronSchedule {
                 ));
             }
         };
-        
+
         Ok(CronSchedule {
             expression: expression.to_string(),
             schedule,
@@ -152,11 +160,17 @@ impl CronSchedule {
     ///
     /// `true` if the schedule matches the given time, `false` otherwise.
     pub fn should_execute_at(&self, time: DateTime<Utc>) -> bool {
-        // Get the previous scheduled time before or at 'time'
-        if let Some(prev) = self.schedule.before(&time).next() {
-            // If the previous time is within one second of the given time,
+        // Check if the next scheduled time after (time - 1 second) is within 1 second of time
+        let check_from = time - chrono::Duration::seconds(1);
+        if let Some(next) = self.schedule.after(&check_from).next() {
+            // If the next time is within one second of the given time,
             // we should execute
-            (time - prev) < chrono::Duration::seconds(1)
+            let diff = if next > time {
+                next - time
+            } else {
+                time - next
+            };
+            diff < chrono::Duration::seconds(1)
         } else {
             false
         }

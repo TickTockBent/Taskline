@@ -12,7 +12,6 @@ use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use tokio::time::{self, Instant};
 
-use crate::cron_parser::CronSchedule;
 use crate::errors::TasklineError;
 use crate::task::{Task, TaskStatus};
 use crate::events::{EventBus, SchedulerEvent};
@@ -570,7 +569,7 @@ impl Scheduler {
     async fn execute_due_tasks(
         tasks: &Arc<Mutex<HashMap<String, Arc<Task>>>>,
         config: &SchedulerConfig,
-        event_bus: &EventBus,
+        _event_bus: &EventBus,
     ) {
         let now = Utc::now();
         let task_ids: Vec<(String, Arc<Task>)> = {
