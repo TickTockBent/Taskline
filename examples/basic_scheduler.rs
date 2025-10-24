@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 #![allow(unused_must_use)]
 #![allow(clippy::all)]
 //! Allow dead code in examples
@@ -5,7 +6,8 @@
 #![allow(unused_variables)]
 
 // use env_logger::Builder;
-use log::{info, LevelFilter};
+// use log::LevelFilter;
+use log::info;
 use std::error::Error;
 use taskline::{Scheduler, Task};
 

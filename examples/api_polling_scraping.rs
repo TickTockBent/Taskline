@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 #![allow(unused_must_use)]
 #![allow(clippy::all)]
 //! Allow dead code in examples
