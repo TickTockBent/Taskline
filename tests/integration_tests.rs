@@ -240,7 +240,11 @@ async fn test_scheduler_uptime_tracking() {
     assert!(uptime.is_some());
 
     let uptime_ms = uptime.unwrap().num_milliseconds();
-    assert!(uptime_ms >= 200, "Uptime was {} ms, expected >= 200 ms", uptime_ms);
+    assert!(
+        uptime_ms >= 200,
+        "Uptime was {} ms, expected >= 200 ms",
+        uptime_ms
+    );
 
     scheduler.stop().await.unwrap();
 }
