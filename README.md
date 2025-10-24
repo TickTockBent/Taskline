@@ -38,7 +38,7 @@ Add Taskline to your Cargo.toml:
 
 ```toml
 [dependencies]
-taskline = "0.1.0"
+taskline = "0.2.0"
 ```
 
 ## Basic Usage
@@ -57,7 +57,7 @@ async fn main() {
         println!("Performing daily maintenance task...");
         // Task implementation here
         Ok(())
-    })).unwrap();
+    })).await.unwrap();
 
     // Start the scheduler (this blocks until the scheduler is stopped)
     scheduler.run().await;
@@ -91,7 +91,7 @@ async fn main() {
         max_retries: 3,
         retry_delay: Duration::from_secs(5),
         fail_scheduler_on_error: false,
-    })).unwrap();
+    })).await.unwrap();
 
     // Start the scheduler in the background
     scheduler.start().await.unwrap();
@@ -115,7 +115,7 @@ let task = Task::new(|| async {
 })
 .with_interval(Duration::from_secs(300));
 
-scheduler.add_task(task)?;
+scheduler.add_task(task).await?;
 ```
 
 ### Task Tags and Filtering
