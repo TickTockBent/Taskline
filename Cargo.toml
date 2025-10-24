@@ -1,0 +1,81 @@
+[package]
+name = "taskline"
+version = "0.2.0"
+edition = "2021"
+authors = ["TickTockBent <benttick@gmail.com>"]
+description = "Lightweight Task Scheduling for Rust"
+license = "MIT"
+repository = "https://github.com/TickTockBent/Taskline"
+keywords = ["cron", "scheduler", "async", "task", "tokio"]
+categories = ["asynchronous", "date-and-time"]
+readme = "README.md"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.35.1", features = ["full"] }
+tokio-util = "0.7.10"
+
+# Cron expression parsing
+cron = "0.12.0"
+
+# Date and time handling
+chrono = { version = "0.4.34", features = ["serde"] }
+
+# Logging
+log = "0.4.20"
+env_logger = { version = "0.11.1", optional = true }
+tracing = { version = "0.1.40", optional = true }
+tracing-subscriber = { version = "0.3.18", optional = true }
+
+# Error handling
+thiserror = "1.0.56"
+
+# Utilities
+uuid = { version = "1.7.0", features = ["v4", "serde"] }
+
+[features]
+default = ["basic-logging"]
+basic-logging = ["env_logger"]
+tracing-integration = ["tracing", "tracing-subscriber"]
+
+[dev-dependencies]
+tokio-test = "0.4.3"
+tempfile = "3.9.0"
+rand = "0.8.5"
+serde = { version = "1.0", features = ["derive"] }
+
+[[example]]
+name = "basic_scheduler"
+path = "examples/basic_scheduler.rs"
+
+[[example]]
+name = "advanced_usage"
+path = "examples/advanced_usage.rs"
+
+[[example]]
+name = "enhanced_features"
+path = "examples/enhanced_features.rs"
+
+[[example]]
+name = "web_integration_axum"
+path = "examples/web_integration_axum.rs"
+
+[[example]]
+name = "monitoring_alerting"
+path = "examples/monitoring_alerting.rs"
+
+[[example]]
+name = "database_maintenance"
+path = "examples/database_maintenance.rs"
+
+[[example]]
+name = "api_polling_scraping"
+path = "examples/api_polling_scraping.rs"
+
+[[example]]
+name = "notification_system"
+path = "examples/notification_system.rs"
+
+[[example]]
+name = "cache_warming"
+path = "examples/cache_warming.rs"
