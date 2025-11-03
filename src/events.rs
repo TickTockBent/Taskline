@@ -112,7 +112,7 @@ pub enum SchedulerEvent {
 /// # Examples
 ///
 /// ```
-/// use taskline::events::{EventBus, SchedulerEvent};
+/// use cronline::events::{EventBus, SchedulerEvent};
 ///
 /// #[tokio::main]
 /// async fn main() {
@@ -138,7 +138,7 @@ impl EventBus {
     /// # Examples
     ///
     /// ```
-    /// use taskline::events::EventBus;
+    /// use cronline::events::EventBus;
     ///
     /// let event_bus = EventBus::new();
     /// ```
@@ -158,7 +158,7 @@ impl EventBus {
     /// # Examples
     ///
     /// ```
-    /// use taskline::events::EventBus;
+    /// use cronline::events::EventBus;
     ///
     /// let event_bus = EventBus::with_capacity(500);
     /// ```
@@ -178,7 +178,7 @@ impl EventBus {
     /// # Examples
     ///
     /// ```
-    /// use taskline::events::{EventBus, SchedulerEvent};
+    /// use cronline::events::{EventBus, SchedulerEvent};
     /// use chrono::Utc;
     ///
     /// let event_bus = EventBus::new();
@@ -198,7 +198,7 @@ impl EventBus {
     /// # Examples
     ///
     /// ```
-    /// use taskline::events::EventBus;
+    /// use cronline::events::EventBus;
     ///
     /// let event_bus = EventBus::new();
     /// let mut receiver = event_bus.subscribe();
@@ -217,7 +217,7 @@ impl EventBus {
     /// # Examples
     ///
     /// ```
-    /// use taskline::events::EventBus;
+    /// use cronline::events::EventBus;
     ///
     /// let event_bus = EventBus::new();
     /// assert_eq!(event_bus.subscriber_count(), 0);

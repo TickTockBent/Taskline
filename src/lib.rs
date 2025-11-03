@@ -131,11 +131,11 @@
 //!
 //! - [`Scheduler`] - Manages and executes tasks on a schedule
 //! - [`Task`] - Represents a schedulable asynchronous task
-//! - [`TasklineError`] - Error types for the library
+//! - [`CronlineError`] - Error types for the library
 //! - [`Result`] - Convenient result type alias
 
 // Re-export the main components
-pub use crate::errors::TasklineError;
+pub use crate::errors::CronlineError;
 pub use crate::events::{EventBus, SchedulerEvent};
 pub use crate::scheduler::{Scheduler, SchedulerConfig};
 pub use crate::task::{ScheduleType, Task, TaskConfig, TaskStats, TaskStatus};
@@ -147,22 +147,22 @@ pub mod events;
 pub mod scheduler;
 pub mod task;
 
-/// Convenient result type alias for Taskline operations.
+/// Convenient result type alias for Cronline operations.
 ///
-/// This is equivalent to `std::result::Result<T, TasklineError>`.
+/// This is equivalent to `std::result::Result<T, CronlineError>`.
 ///
 /// # Examples
 ///
 /// ```
-/// use taskline::Result;
+/// use cronline::Result;
 ///
 /// fn do_something() -> Result<()> {
 ///     Ok(())
 /// }
 /// ```
-pub type Result<T> = std::result::Result<T, TasklineError>;
+pub type Result<T> = std::result::Result<T, CronlineError>;
 
-/// The version of the Taskline library.
+/// The version of the Cronline library.
 ///
 /// This is extracted from the `Cargo.toml` at compile time.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

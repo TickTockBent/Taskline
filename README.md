@@ -2,8 +2,8 @@
 
 Cronline is a minimalist yet powerful cron-style task scheduler built with Rust. Designed for simplicity, performance, and ease of integration, Cronline enables developers to effortlessly manage scheduled asynchronous tasks within Rust applications.
 
-[![CI](https://github.com/ticktockbent/taskline/workflows/CI/badge.svg)](https://github.com/ticktockbent/taskline/actions)
-[![Coverage](https://codecov.io/gh/ticktockbent/taskline/branch/main/graph/badge.svg)](https://codecov.io/gh/ticktockbent/taskline)
+[![CI](https://github.com/ticktockbent/cronline/workflows/CI/badge.svg)](https://github.com/ticktockbent/cronline/actions)
+[![Coverage](https://codecov.io/gh/ticktockbent/cronline/branch/main/graph/badge.svg)](https://codecov.io/gh/ticktockbent/cronline)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Crates.io](https://img.shields.io/crates/v/cronline.svg)](https://crates.io/crates/cronline)
 [![Documentation](https://docs.rs/cronline/badge.svg)](https://docs.rs/cronline)

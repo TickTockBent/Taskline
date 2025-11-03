@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.1] - 2025-11-03
 
 ### Changed
-- **BREAKING**: Renamed package from `taskline` to `cronline` (crates.io name collision)
+- **BREAKING**: Renamed package from `cronline` to `cronline` (crates.io name collision)
 - Updated dependency: `cron` from 0.12.0 to 0.15.0
 - Updated dependency: `rand` from 0.8.5 to 0.9.2 (dev-dependency)
 - Updated dependency: `thiserror` from 1.0.56 to 2.0.17
@@ -127,6 +127,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multiple scheduler support
 - Task status tracking (Idle, Running, Paused, Completed, Failed)
 
-[0.2.1]: https://github.com/TickTockBent/Taskline/compare/v0.2.0...v0.2.1
-[0.2.0]: https://github.com/TickTockBent/Taskline/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/TickTockBent/Taskline/releases/tag/v0.1.0
+[0.2.1]: https://github.com/TickTockBent/Cronline/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/TickTockBent/Cronline/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/TickTockBent/Cronline/releases/tag/v0.1.0

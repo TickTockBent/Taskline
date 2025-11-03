@@ -120,7 +120,7 @@ Set these in: Repository Settings → Secrets and variables → Actions
 5. Save
 
 Documentation will be available at:
-`https://ticktockbent.github.io/Taskline/`
+`https://ticktockbent.github.io/Cronline/`
 
 ### Managing Dependabot
 

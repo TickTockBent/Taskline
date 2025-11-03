@@ -5,7 +5,7 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-//! Real-world example: Taskline integration with Axum web framework
+//! Real-world example: Cronline integration with Axum web framework
 //!
 //! This example demonstrates:
 //! - Running a scheduler alongside an Axum web server
@@ -17,7 +17,7 @@
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;
-use taskline::{Scheduler, SchedulerEvent, Task, TaskConfig};
+use cronline::{Scheduler, SchedulerEvent, Task, TaskConfig};
 use tokio::sync::RwLock;
 
 // Simulated application state
@@ -84,7 +84,7 @@ struct CreateTaskRequest {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // env_logger::init(); // Optional: enable with basic-logging feature
 
-    println!("🚀 Starting Taskline + Axum Integration Demo\n");
+    println!("🚀 Starting Cronline + Axum Integration Demo\n");
 
     // Create scheduler
     let scheduler = Arc::new(Scheduler::new());
@@ -187,7 +187,7 @@ async fn setup_scheduled_tasks(state: &AppState) -> Result<(), Box<dyn std::erro
                     println!("🧹 Cleaned up {} old sessions", count);
                     Ok(())
                 }
-                Err(e) => Err(taskline::TasklineError::TaskExecutionError(e.to_string())),
+                Err(e) => Err(cronline::CronlineError::TaskExecutionError(e.to_string())),
             }
         }
     })
@@ -213,7 +213,7 @@ async fn setup_scheduled_tasks(state: &AppState) -> Result<(), Box<dyn std::erro
                     println!("✨ Database tables optimized successfully");
                     Ok(())
                 }
-                Err(e) => Err(taskline::TasklineError::TaskExecutionError(e.to_string())),
+                Err(e) => Err(cronline::CronlineError::TaskExecutionError(e.to_string())),
             }
         }
     })
@@ -233,7 +233,7 @@ async fn setup_scheduled_tasks(state: &AppState) -> Result<(), Box<dyn std::erro
                     println!("💾 Database backup completed successfully");
                     Ok(())
                 }
-                Err(e) => Err(taskline::TasklineError::TaskExecutionError(e.to_string())),
+                Err(e) => Err(cronline::CronlineError::TaskExecutionError(e.to_string())),
             }
         }
     })

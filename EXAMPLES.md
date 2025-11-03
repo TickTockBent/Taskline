@@ -1,6 +1,6 @@
-# Taskline Real-World Examples
+# Cronline Real-World Examples
 
-This document provides an overview of the comprehensive real-world examples included with Taskline. Each example demonstrates practical applications and best practices for using Taskline in production scenarios.
+This document provides an overview of the comprehensive real-world examples included with Cronline. Each example demonstrates practical applications and best practices for using Cronline in production scenarios.
 
 ## Running the Examples
 
@@ -23,7 +23,7 @@ cargo run --example monitoring_alerting
 **File:** `examples/web_integration_axum.rs`
 
 **What it demonstrates:**
-- Integrating Taskline with the Axum web framework
+- Integrating Cronline with the Axum web framework
 - Running a scheduler alongside a web server
 - Health check tasks running in the background
 - Scheduled database maintenance
@@ -411,8 +411,8 @@ After reviewing these examples:
 ## Additional Resources
 
 - [Main README](README.md) - Getting started guide
-- [API Documentation](https://docs.rs/taskline) - Complete API reference
-- [GitHub Issues](https://github.com/TickTockBent/Taskline/issues) - Report bugs or request features
+- [API Documentation](https://docs.rs/cronline) - Complete API reference
+- [GitHub Issues](https://github.com/TickTockBent/Cronline/issues) - Report bugs or request features
 
 ---
 

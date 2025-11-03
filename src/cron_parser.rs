@@ -8,7 +8,7 @@ use cron::Schedule;
 use log::{debug, trace};
 use std::str::FromStr;
 
-use crate::errors::TasklineError;
+use crate::errors::CronlineError;
 
 /// A parsed cron expression that can calculate next execution times.
 ///
@@ -51,7 +51,7 @@ impl CronSchedule {
     /// # Returns
     ///
     /// Returns `Ok(CronSchedule)` if the expression is valid, or
-    /// `Err(TasklineError::CronParseError)` if parsing fails.
+    /// `Err(CronlineError::CronParseError)` if parsing fails.
     ///
     /// # Examples
     ///
@@ -62,8 +62,8 @@ impl CronSchedule {
     ///
     /// # Errors
     ///
-    /// Returns [`TasklineError::CronParseError`] if the expression is invalid.
-    pub fn new(expression: &str) -> Result<Self, TasklineError> {
+    /// Returns [`CronlineError::CronParseError`] if the expression is invalid.
+    pub fn new(expression: &str) -> Result<Self, CronlineError> {
         debug!("Parsing cron expression: {}", expression);
 
         // The cron crate expects 6 or 7 fields (seconds minute hour day month dayofweek [year])
@@ -77,7 +77,7 @@ impl CronSchedule {
         let schedule = match Schedule::from_str(&cron_expr) {
             Ok(schedule) => schedule,
             Err(e) => {
-                return Err(TasklineError::CronParseError(format!(
+                return Err(CronlineError::CronParseError(format!(
                     "Invalid cron expression '{}': {}",
                     expression, e
                 )));
@@ -189,7 +189,7 @@ impl CronSchedule {
 ///
 /// # Errors
 ///
-/// Returns [`TasklineError::CronParseError`] if the cron expression is invalid.
+/// Returns [`CronlineError::CronParseError`] if the cron expression is invalid.
 ///
 /// # Examples
 ///
@@ -199,7 +199,7 @@ impl CronSchedule {
 /// }
 /// ```
 #[allow(dead_code)]
-pub fn is_scheduled_now(cron_expr: &str) -> Result<bool, TasklineError> {
+pub fn is_scheduled_now(cron_expr: &str) -> Result<bool, CronlineError> {
     let schedule = CronSchedule::new(cron_expr)?;
     Ok(schedule.should_execute_at(Utc::now()))
 }

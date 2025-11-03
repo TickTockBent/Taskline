@@ -5,7 +5,7 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-//! Example demonstrating the enhanced features of Taskline
+//! Example demonstrating the enhanced features of Cronline
 //!
 //! This example showcases:
 //! - Interval-based scheduling
@@ -17,13 +17,13 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
-use taskline::{Scheduler, SchedulerEvent, Task};
+use cronline::{Scheduler, SchedulerEvent, Task};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // env_logger::init(); // Optional: enable with basic-logging feature
 
-    println!("=== Taskline Enhanced Features Demo ===\n");
+    println!("=== Cronline Enhanced Features Demo ===\n");
 
     let scheduler = Scheduler::new();
 

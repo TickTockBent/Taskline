@@ -1,6 +1,6 @@
 # CI/CD Workflows Documentation
 
-This document describes the GitHub Actions workflows configured for the Taskline project.
+This document describes the GitHub Actions workflows configured for the Cronline project.
 
 ## Workflows Overview
 

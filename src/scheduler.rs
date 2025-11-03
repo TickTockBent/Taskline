@@ -12,7 +12,7 @@ use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use tokio::time::{self, Instant};
 
-use crate::errors::TasklineError;
+use crate::errors::CronlineError;
 use crate::events::{EventBus, SchedulerEvent};
 use crate::task::{Task, TaskStatus};
 use crate::Result;
@@ -25,7 +25,7 @@ use crate::Result;
 /// # Examples
 ///
 /// ```
-/// use taskline::SchedulerConfig;
+/// use cronline::SchedulerConfig;
 /// use std::time::Duration;
 ///
 /// let config = SchedulerConfig {
@@ -76,7 +76,7 @@ impl Default for SchedulerConfig {
 /// ## Basic Usage
 ///
 /// ```no_run
-/// use taskline::{Scheduler, Task};
+/// use cronline::{Scheduler, Task};
 ///
 /// #[tokio::main]
 /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -102,7 +102,7 @@ impl Default for SchedulerConfig {
 /// ## Custom Configuration
 ///
 /// ```
-/// use taskline::{Scheduler, SchedulerConfig};
+/// use cronline::{Scheduler, SchedulerConfig};
 /// use std::time::Duration;
 ///
 /// let config = SchedulerConfig {
@@ -145,7 +145,7 @@ impl Scheduler {
     /// # Examples
     ///
     /// ```
-    /// use taskline::Scheduler;
+    /// use cronline::Scheduler;
     ///
     /// let scheduler = Scheduler::new();
     /// ```
@@ -162,7 +162,7 @@ impl Scheduler {
     /// # Examples
     ///
     /// ```
-    /// use taskline::{Scheduler, SchedulerConfig};
+    /// use cronline::{Scheduler, SchedulerConfig};
     /// use std::time::Duration;
     ///
     /// let config = SchedulerConfig {
@@ -191,7 +191,7 @@ impl Scheduler {
     /// # Examples
     ///
     /// ```
-    /// use taskline::Scheduler;
+    /// use cronline::Scheduler;
     ///
     /// let scheduler = Scheduler::new();
     /// let mut receiver = scheduler.event_bus().subscribe();
@@ -222,7 +222,7 @@ impl Scheduler {
     /// # Examples
     ///
     /// ```no_run
-    /// use taskline::{Scheduler, Task};
+    /// use cronline::{Scheduler, Task};
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let scheduler = Scheduler::new();
@@ -239,7 +239,7 @@ impl Scheduler {
     ///
     /// # Errors
     ///
-    /// Returns [`TasklineError::CronParseError`] if the cron expression is invalid.
+    /// Returns [`CronlineError::CronParseError`] if the cron expression is invalid.
     pub async fn add(&self, cron_expr: &str, task: Task) -> Result<String> {
         let task = task.with_schedule(cron_expr)?;
         let task_id = task.id().to_string();
@@ -298,7 +298,7 @@ impl Scheduler {
 
             Ok(())
         } else {
-            Err(TasklineError::SchedulerError(format!(
+            Err(CronlineError::SchedulerError(format!(
                 "Task '{}' not found",
                 task_id
             )))
@@ -324,7 +324,7 @@ impl Scheduler {
     /// # Examples
     ///
     /// ```no_run
-    /// # use taskline::{Scheduler, Task};
+    /// # use cronline::{Scheduler, Task};
     /// # async fn example() {
     /// let scheduler = Scheduler::new();
     ///
@@ -350,7 +350,7 @@ impl Scheduler {
     /// # Examples
     ///
     /// ```no_run
-    /// # use taskline::{Scheduler, Task};
+    /// # use cronline::{Scheduler, Task};
     /// # async fn example() {
     /// let scheduler = Scheduler::new();
     ///
@@ -375,7 +375,7 @@ impl Scheduler {
     /// # Examples
     ///
     /// ```no_run
-    /// # use taskline::{Scheduler, Task};
+    /// # use cronline::{Scheduler, Task};
     /// # async fn example() {
     /// let scheduler = Scheduler::new();
     ///
@@ -404,7 +404,7 @@ impl Scheduler {
     /// # Examples
     ///
     /// ```no_run
-    /// # use taskline::Scheduler;
+    /// # use cronline::Scheduler;
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let scheduler = Scheduler::new();
     /// // Add tasks...
@@ -417,11 +417,11 @@ impl Scheduler {
     ///
     /// # Errors
     ///
-    /// Returns [`TasklineError::SchedulerError`] if the scheduler is already running.
+    /// Returns [`CronlineError::SchedulerError`] if the scheduler is already running.
     pub async fn start(&self) -> Result<()> {
         let mut running = self.running.lock().await;
         if *running {
-            return Err(TasklineError::SchedulerError(
+            return Err(CronlineError::SchedulerError(
                 "Scheduler is already running".to_string(),
             ));
         }
@@ -469,7 +469,7 @@ impl Scheduler {
 
         if let Some(handle) = handle {
             handle.await.map_err(|e| {
-                TasklineError::SchedulerError(format!("Scheduler task failed: {}", e))
+                CronlineError::SchedulerError(format!("Scheduler task failed: {}", e))
             })?;
         }
 
@@ -488,7 +488,7 @@ impl Scheduler {
     /// # Examples
     ///
     /// ```no_run
-    /// # use taskline::Scheduler;
+    /// # use cronline::Scheduler;
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let scheduler = Scheduler::new();
     /// scheduler.start().await?;
@@ -500,11 +500,11 @@ impl Scheduler {
     ///
     /// # Errors
     ///
-    /// Returns [`TasklineError::SchedulerError`] if the scheduler is not running.
+    /// Returns [`CronlineError::SchedulerError`] if the scheduler is not running.
     pub async fn stop(&self) -> Result<()> {
         let mut running = self.running.lock().await;
         if !*running {
-            return Err(TasklineError::SchedulerError(
+            return Err(CronlineError::SchedulerError(
                 "Scheduler is not running".to_string(),
             ));
         }
@@ -530,7 +530,7 @@ impl Scheduler {
             match tokio::time::timeout(self.config.shutdown_grace_period, handle).await {
                 Ok(result) => {
                     result.map_err(|e| {
-                        TasklineError::SchedulerError(format!(
+                        CronlineError::SchedulerError(format!(
                             "Scheduler task failed during shutdown: {}",
                             e
                         ))
@@ -647,7 +647,7 @@ impl Scheduler {
         if let Some(task) = self.get_task(task_id).await {
             task.pause().await
         } else {
-            Err(TasklineError::SchedulerError(format!(
+            Err(CronlineError::SchedulerError(format!(
                 "Task '{}' not found",
                 task_id
             )))
@@ -659,7 +659,7 @@ impl Scheduler {
         if let Some(task) = self.get_task(task_id).await {
             task.resume().await
         } else {
-            Err(TasklineError::SchedulerError(format!(
+            Err(CronlineError::SchedulerError(format!(
                 "Task '{}' not found",
                 task_id
             )))

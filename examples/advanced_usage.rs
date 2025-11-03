@@ -11,7 +11,7 @@ use log::{error, info, warn};
 use std::error::Error;
 use std::sync::Arc;
 use std::time::Duration;
-use taskline::{Result as TasklineResult, Scheduler, SchedulerConfig, Task, TaskConfig};
+use cronline::{Result as CronlineResult, Scheduler, SchedulerConfig, Task, TaskConfig};
 use tokio::sync::Mutex;
 
 // A shared counter to demonstrate task state sharing
@@ -195,7 +195,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 
 // Demonstrate custom task creation with error handling
-async fn perform_database_maintenance() -> TasklineResult<()> {
+async fn perform_database_maintenance() -> CronlineResult<()> {
     // Here you would typically connect to a database and perform operations
     info!("Performing database maintenance");
 

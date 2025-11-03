@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
-use taskline::{Scheduler, SchedulerConfig, Task, TaskConfig};
+use cronline::{Scheduler, SchedulerConfig, Task, TaskConfig};
 
 #[tokio::test]
 async fn test_full_scheduler_lifecycle() {
@@ -132,14 +132,14 @@ async fn test_task_pause_resume_workflow() {
     scheduler.pause_task(&task_id).await.unwrap();
 
     if let Some(task) = scheduler.get_task(&task_id).await {
-        assert_eq!(task.status().await, taskline::task::TaskStatus::Paused);
+        assert_eq!(task.status().await, cronline::task::TaskStatus::Paused);
     }
 
     // Resume task
     scheduler.resume_task(&task_id).await.unwrap();
 
     if let Some(task) = scheduler.get_task(&task_id).await {
-        assert_eq!(task.status().await, taskline::task::TaskStatus::Idle);
+        assert_eq!(task.status().await, cronline::task::TaskStatus::Idle);
     }
 }
 

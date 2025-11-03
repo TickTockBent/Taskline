@@ -1,4 +1,4 @@
-//! Error types for Taskline operations.
+//! Error types for Cronline operations.
 //!
 //! This module defines all error types that can occur during scheduler and task operations.
 
@@ -6,7 +6,7 @@ use std::error::Error;
 use std::fmt;
 use std::io;
 
-/// Represents all possible errors that can occur in Taskline operations.
+/// Represents all possible errors that can occur in Cronline operations.
 ///
 /// This error type covers all failure scenarios including cron parsing errors,
 /// task execution failures, configuration issues, and scheduler management errors.
@@ -14,17 +14,17 @@ use std::io;
 /// # Examples
 ///
 /// ```
-/// use taskline::{TasklineError, Result};
+/// use cronline::{CronlineError, Result};
 ///
 /// fn parse_cron(expr: &str) -> Result<()> {
 ///     if expr.is_empty() {
-///         return Err(TasklineError::CronParseError("Empty expression".to_string()));
+///         return Err(CronlineError::CronParseError("Empty expression".to_string()));
 ///     }
 ///     Ok(())
 /// }
 /// ```
 #[derive(Debug)]
-pub enum TasklineError {
+pub enum CronlineError {
     /// Error parsing a cron expression.
     ///
     /// This occurs when an invalid cron expression is provided to the scheduler.
@@ -32,9 +32,9 @@ pub enum TasklineError {
     /// # Examples
     ///
     /// ```
-    /// use taskline::TasklineError;
+    /// use cronline::CronlineError;
     ///
-    /// let error = TasklineError::CronParseError("Invalid syntax".to_string());
+    /// let error = CronlineError::CronParseError("Invalid syntax".to_string());
     /// assert_eq!(error.to_string(), "Cron parsing error: Invalid syntax");
     /// ```
     CronParseError(String),
@@ -46,9 +46,9 @@ pub enum TasklineError {
     /// # Examples
     ///
     /// ```
-    /// use taskline::TasklineError;
+    /// use cronline::CronlineError;
     ///
-    /// let error = TasklineError::TaskExecutionError("Database connection failed".to_string());
+    /// let error = CronlineError::TaskExecutionError("Database connection failed".to_string());
     /// ```
     TaskExecutionError(String),
 
@@ -65,9 +65,9 @@ pub enum TasklineError {
     /// # Examples
     ///
     /// ```
-    /// use taskline::TasklineError;
+    /// use cronline::CronlineError;
     ///
-    /// let error = TasklineError::ConfigError("Invalid timeout value".to_string());
+    /// let error = CronlineError::ConfigError("Invalid timeout value".to_string());
     /// ```
     ConfigError(String),
 
@@ -78,9 +78,9 @@ pub enum TasklineError {
     /// # Examples
     ///
     /// ```
-    /// use taskline::TasklineError;
+    /// use cronline::CronlineError;
     ///
-    /// let error = TasklineError::TaskTimeout("Task exceeded 30s timeout".to_string());
+    /// let error = CronlineError::TaskTimeout("Task exceeded 30s timeout".to_string());
     /// ```
     TaskTimeout(String),
 
@@ -91,37 +91,37 @@ pub enum TasklineError {
     /// # Examples
     ///
     /// ```
-    /// use taskline::TasklineError;
+    /// use cronline::CronlineError;
     ///
-    /// let error = TasklineError::SchedulerError("Already running".to_string());
+    /// let error = CronlineError::SchedulerError("Already running".to_string());
     /// ```
     SchedulerError(String),
 }
 
-impl fmt::Display for TasklineError {
+impl fmt::Display for CronlineError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TasklineError::CronParseError(msg) => write!(f, "Cron parsing error: {}", msg),
-            TasklineError::TaskExecutionError(msg) => write!(f, "Task execution error: {}", msg),
-            TasklineError::IoError(err) => write!(f, "IO error: {}", err),
-            TasklineError::ConfigError(msg) => write!(f, "Configuration error: {}", msg),
-            TasklineError::TaskTimeout(msg) => write!(f, "Task timeout: {}", msg),
-            TasklineError::SchedulerError(msg) => write!(f, "Scheduler error: {}", msg),
+            CronlineError::CronParseError(msg) => write!(f, "Cron parsing error: {}", msg),
+            CronlineError::TaskExecutionError(msg) => write!(f, "Task execution error: {}", msg),
+            CronlineError::IoError(err) => write!(f, "IO error: {}", err),
+            CronlineError::ConfigError(msg) => write!(f, "Configuration error: {}", msg),
+            CronlineError::TaskTimeout(msg) => write!(f, "Task timeout: {}", msg),
+            CronlineError::SchedulerError(msg) => write!(f, "Scheduler error: {}", msg),
         }
     }
 }
 
-impl Error for TasklineError {}
+impl Error for CronlineError {}
 
-impl From<io::Error> for TasklineError {
+impl From<io::Error> for CronlineError {
     fn from(error: io::Error) -> Self {
-        TasklineError::IoError(error)
+        CronlineError::IoError(error)
     }
 }
 
-impl From<String> for TasklineError {
+impl From<String> for CronlineError {
     fn from(error: String) -> Self {
-        TasklineError::TaskExecutionError(error)
+        CronlineError::TaskExecutionError(error)
     }
 }
 
@@ -132,39 +132,39 @@ mod tests {
 
     #[test]
     fn test_error_display() {
-        let error = TasklineError::CronParseError("invalid cron".to_string());
+        let error = CronlineError::CronParseError("invalid cron".to_string());
         assert_eq!(error.to_string(), "Cron parsing error: invalid cron");
 
-        let error = TasklineError::TaskExecutionError("task failed".to_string());
+        let error = CronlineError::TaskExecutionError("task failed".to_string());
         assert_eq!(error.to_string(), "Task execution error: task failed");
 
-        let error = TasklineError::ConfigError("bad config".to_string());
+        let error = CronlineError::ConfigError("bad config".to_string());
         assert_eq!(error.to_string(), "Configuration error: bad config");
 
-        let error = TasklineError::TaskTimeout("timeout".to_string());
+        let error = CronlineError::TaskTimeout("timeout".to_string());
         assert_eq!(error.to_string(), "Task timeout: timeout");
 
-        let error = TasklineError::SchedulerError("scheduler issue".to_string());
+        let error = CronlineError::SchedulerError("scheduler issue".to_string());
         assert_eq!(error.to_string(), "Scheduler error: scheduler issue");
     }
 
     #[test]
     fn test_io_error_conversion() {
         let io_error = io::Error::new(io::ErrorKind::NotFound, "file not found");
-        let taskline_error: TasklineError = io_error.into();
+        let cronline_error: CronlineError = io_error.into();
 
-        match taskline_error {
-            TasklineError::IoError(_) => (),
+        match cronline_error {
+            CronlineError::IoError(_) => (),
             _ => panic!("Expected IoError variant"),
         }
     }
 
     #[test]
     fn test_string_conversion() {
-        let error: TasklineError = "test error".to_string().into();
+        let error: CronlineError = "test error".to_string().into();
 
         match error {
-            TasklineError::TaskExecutionError(msg) => {
+            CronlineError::TaskExecutionError(msg) => {
                 assert_eq!(msg, "test error");
             }
             _ => panic!("Expected TaskExecutionError variant"),
@@ -173,13 +173,13 @@ mod tests {
 
     #[test]
     fn test_error_trait() {
-        let error = TasklineError::CronParseError("test".to_string());
+        let error = CronlineError::CronParseError("test".to_string());
         let _error_trait: &dyn std::error::Error = &error;
     }
 
     #[test]
     fn test_debug_format() {
-        let error = TasklineError::CronParseError("test".to_string());
+        let error = CronlineError::CronParseError("test".to_string());
         let debug_str = format!("{:?}", error);
         assert!(debug_str.contains("CronParseError"));
     }

@@ -17,7 +17,7 @@
 use chrono::{DateTime, Utc};
 use std::sync::Arc;
 use std::time::Duration;
-use taskline::{Scheduler, SchedulerEvent, Task, TaskConfig};
+use cronline::{Scheduler, SchedulerEvent, Task, TaskConfig};
 use tokio::sync::RwLock;
 
 #[derive(Clone)]
@@ -328,7 +328,7 @@ async fn setup_maintenance_tasks(db: &DatabaseManager) -> Result<(), Box<dyn std
             let mut backup = mgr.write().await;
             match backup.perform_full_backup().await {
                 Ok(_) => Ok(()),
-                Err(e) => Err(taskline::TasklineError::TaskExecutionError(e)),
+                Err(e) => Err(cronline::CronlineError::TaskExecutionError(e)),
             }
         }
     })
@@ -351,7 +351,7 @@ async fn setup_maintenance_tasks(db: &DatabaseManager) -> Result<(), Box<dyn std
             let mut backup = mgr.write().await;
             match backup.perform_incremental_backup().await {
                 Ok(_) => Ok(()),
-                Err(e) => Err(taskline::TasklineError::TaskExecutionError(e)),
+                Err(e) => Err(cronline::CronlineError::TaskExecutionError(e)),
             }
         }
     })
@@ -368,7 +368,7 @@ async fn setup_maintenance_tasks(db: &DatabaseManager) -> Result<(), Box<dyn std
             let mut db = pool.write().await;
             match db.vacuum_database().await {
                 Ok(_) => Ok(()),
-                Err(e) => Err(taskline::TasklineError::TaskExecutionError(e)),
+                Err(e) => Err(cronline::CronlineError::TaskExecutionError(e)),
             }
         }
     })
@@ -385,7 +385,7 @@ async fn setup_maintenance_tasks(db: &DatabaseManager) -> Result<(), Box<dyn std
             let mut db = pool.write().await;
             match db.rebuild_indexes().await {
                 Ok(_) => Ok(()),
-                Err(e) => Err(taskline::TasklineError::TaskExecutionError(e)),
+                Err(e) => Err(cronline::CronlineError::TaskExecutionError(e)),
             }
         }
     })
@@ -402,7 +402,7 @@ async fn setup_maintenance_tasks(db: &DatabaseManager) -> Result<(), Box<dyn std
             let mut db = pool.write().await;
             match db.update_statistics().await {
                 Ok(_) => Ok(()),
-                Err(e) => Err(taskline::TasklineError::TaskExecutionError(e)),
+                Err(e) => Err(cronline::CronlineError::TaskExecutionError(e)),
             }
         }
     })
@@ -419,7 +419,7 @@ async fn setup_maintenance_tasks(db: &DatabaseManager) -> Result<(), Box<dyn std
             let mut db = pool.write().await;
             match db.purge_old_data(90).await {
                 Ok(_) => Ok(()),
-                Err(e) => Err(taskline::TasklineError::TaskExecutionError(e)),
+                Err(e) => Err(cronline::CronlineError::TaskExecutionError(e)),
             }
         }
     })
@@ -436,7 +436,7 @@ async fn setup_maintenance_tasks(db: &DatabaseManager) -> Result<(), Box<dyn std
             let mut db = pool.write().await;
             match db.archive_old_records("orders", 365).await {
                 Ok(_) => Ok(()),
-                Err(e) => Err(taskline::TasklineError::TaskExecutionError(e)),
+                Err(e) => Err(cronline::CronlineError::TaskExecutionError(e)),
             }
         }
     })
@@ -453,7 +453,7 @@ async fn setup_maintenance_tasks(db: &DatabaseManager) -> Result<(), Box<dyn std
             let mut db = pool.write().await;
             match db.check_table_bloat().await {
                 Ok(_) => Ok(()),
-                Err(e) => Err(taskline::TasklineError::TaskExecutionError(e)),
+                Err(e) => Err(cronline::CronlineError::TaskExecutionError(e)),
             }
         }
     })
@@ -470,7 +470,7 @@ async fn setup_maintenance_tasks(db: &DatabaseManager) -> Result<(), Box<dyn std
             let mut backup = mgr.write().await;
             match backup.cleanup_old_backups(30).await {
                 Ok(_) => Ok(()),
-                Err(e) => Err(taskline::TasklineError::TaskExecutionError(e)),
+                Err(e) => Err(cronline::CronlineError::TaskExecutionError(e)),
             }
         }
     })

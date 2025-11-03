@@ -14,7 +14,7 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::cron_parser::CronSchedule;
-use crate::errors::TasklineError;
+use crate::errors::CronlineError;
 use crate::Result;
 
 /// Represents different scheduling types for tasks.
@@ -37,7 +37,7 @@ pub enum ScheduleType {
 /// # Examples
 ///
 /// ```
-/// use taskline::TaskStatus;
+/// use cronline::TaskStatus;
 ///
 /// let status = TaskStatus::Idle;
 /// assert_eq!(status.to_string(), "idle");
@@ -76,7 +76,7 @@ impl fmt::Display for TaskStatus {
 /// # Examples
 ///
 /// ```
-/// use taskline::TaskConfig;
+/// use cronline::TaskConfig;
 /// use std::time::Duration;
 ///
 /// let config = TaskConfig {
@@ -131,7 +131,7 @@ impl Default for TaskConfig {
 /// # Examples
 ///
 /// ```no_run
-/// # use taskline::{Task, TaskStats};
+/// # use cronline::{Task, TaskStats};
 /// # async fn example() {
 /// let task = Task::new(|| async { Ok(()) });
 /// task.execute().await.unwrap();
@@ -181,7 +181,7 @@ pub type TaskFn = Box<dyn Fn() -> Pin<Box<dyn Future<Output = Result<()>> + Send
 /// ## Basic Task
 ///
 /// ```
-/// use taskline::Task;
+/// use cronline::Task;
 ///
 /// let task = Task::new(|| async {
 ///     println!("Task executing!");
@@ -192,7 +192,7 @@ pub type TaskFn = Box<dyn Fn() -> Pin<Box<dyn Future<Output = Result<()>> + Send
 /// ## Task with Configuration
 ///
 /// ```
-/// use taskline::{Task, TaskConfig};
+/// use cronline::{Task, TaskConfig};
 /// use std::time::Duration;
 ///
 /// let task = Task::new(|| async {
@@ -211,7 +211,7 @@ pub type TaskFn = Box<dyn Fn() -> Pin<Box<dyn Future<Output = Result<()>> + Send
 /// ## Task with State
 ///
 /// ```
-/// use taskline::Task;
+/// use cronline::Task;
 /// use std::sync::Arc;
 /// use std::sync::atomic::{AtomicU32, Ordering};
 ///
@@ -260,7 +260,7 @@ impl Task {
     /// # Examples
     ///
     /// ```
-    /// use taskline::Task;
+    /// use cronline::Task;
     ///
     /// // Simple task
     /// let task = Task::new(|| async {
@@ -302,7 +302,7 @@ impl Task {
     /// # Examples
     ///
     /// ```
-    /// use taskline::Task;
+    /// use cronline::Task;
     ///
     /// let task = Task::new(|| async { Ok(()) });
     /// println!("Task ID: {}", task.id());
@@ -320,7 +320,7 @@ impl Task {
     /// # Examples
     ///
     /// ```
-    /// use taskline::Task;
+    /// use cronline::Task;
     ///
     /// let task = Task::new(|| async { Ok(()) })
     ///     .with_name("Daily Backup");
@@ -339,7 +339,7 @@ impl Task {
     /// # Examples
     ///
     /// ```
-    /// use taskline::{Task, TaskConfig};
+    /// use cronline::{Task, TaskConfig};
     /// use std::time::Duration;
     ///
     /// let task = Task::new(|| async { Ok(()) })
@@ -364,12 +364,12 @@ impl Task {
     /// # Returns
     ///
     /// Returns `Ok(Task)` if the cron expression is valid, or
-    /// `Err(TasklineError)` if parsing fails.
+    /// `Err(CronlineError)` if parsing fails.
     ///
     /// # Examples
     ///
     /// ```
-    /// use taskline::Task;
+    /// use cronline::Task;
     ///
     /// let task = Task::new(|| async { Ok(()) })
     ///     .with_schedule("*/5 * * * *") // Every 5 minutes
@@ -378,7 +378,7 @@ impl Task {
     ///
     /// # Errors
     ///
-    /// Returns [`TasklineError::CronParseError`] if the cron expression is invalid.
+    /// Returns [`CronlineError::CronParseError`] if the cron expression is invalid.
     pub fn with_schedule(mut self, cron_expr: &str) -> Result<Self> {
         let cron_schedule = CronSchedule::new(cron_expr)?;
 
@@ -402,7 +402,7 @@ impl Task {
     /// # Examples
     ///
     /// ```
-    /// use taskline::Task;
+    /// use cronline::Task;
     /// use std::time::Duration;
     ///
     /// let task = Task::new(|| async { Ok(()) })
@@ -427,7 +427,7 @@ impl Task {
     /// # Examples
     ///
     /// ```
-    /// use taskline::Task;
+    /// use cronline::Task;
     ///
     /// let task = Task::new(|| async { Ok(()) })
     ///     .with_tags(&["backup", "database", "nightly"]);
@@ -446,7 +446,7 @@ impl Task {
     /// # Examples
     ///
     /// ```
-    /// use taskline::Task;
+    /// use cronline::Task;
     ///
     /// let task = Task::new(|| async { Ok(()) })
     ///     .with_tag("backup");
@@ -461,7 +461,7 @@ impl Task {
     /// # Examples
     ///
     /// ```
-    /// use taskline::Task;
+    /// use cronline::Task;
     ///
     /// let task = Task::new(|| async { Ok(()) })
     ///     .with_tags(&["backup", "database"]);
@@ -477,7 +477,7 @@ impl Task {
     /// # Examples
     ///
     /// ```
-    /// use taskline::Task;
+    /// use cronline::Task;
     ///
     /// let task = Task::new(|| async { Ok(()) })
     ///     .with_tag("backup");
@@ -549,7 +549,7 @@ impl Task {
     /// # Examples
     ///
     /// ```no_run
-    /// # use taskline::Task;
+    /// # use cronline::Task;
     /// # async fn example() {
     /// let task = Task::new(|| async { Ok(()) });
     /// let status = task.status().await;
@@ -565,7 +565,7 @@ impl Task {
     /// # Examples
     ///
     /// ```no_run
-    /// # use taskline::Task;
+    /// # use cronline::Task;
     /// # async fn example() {
     /// let task = Task::new(|| async { Ok(()) });
     /// task.execute().await.unwrap();
@@ -615,12 +615,12 @@ impl Task {
     /// # Returns
     ///
     /// Returns `Ok(())` if the task completed successfully (possibly after retries),
-    /// or `Err(TasklineError)` if it failed after all retry attempts or timed out.
+    /// or `Err(CronlineError)` if it failed after all retry attempts or timed out.
     ///
     /// # Examples
     ///
     /// ```no_run
-    /// # use taskline::Task;
+    /// # use cronline::Task;
     /// # async fn example() {
     /// let task = Task::new(|| async {
     ///     println!("Running task...");
@@ -775,11 +775,11 @@ impl Task {
 
                 match execution_result {
                     ExecutionOutcome::Completed(result) => result,
-                    ExecutionOutcome::Cancelled => Err(TasklineError::TaskExecutionError(format!(
+                    ExecutionOutcome::Cancelled => Err(CronlineError::TaskExecutionError(format!(
                         "Task '{}' was cancelled",
                         self.name
                     ))),
-                    ExecutionOutcome::TimedOut => Err(TasklineError::TaskTimeout(format!(
+                    ExecutionOutcome::TimedOut => Err(CronlineError::TaskTimeout(format!(
                         "Task '{}' timed out after {:?}",
                         self.name, timeout_duration
                     ))),
@@ -797,7 +797,7 @@ impl Task {
 
                 match result {
                     Some(r) => r,
-                    None => Err(TasklineError::TaskExecutionError(format!(
+                    None => Err(CronlineError::TaskExecutionError(format!(
                         "Task '{}' was cancelled",
                         self.name
                     ))),
@@ -822,7 +822,7 @@ impl Task {
     /// # Examples
     ///
     /// ```no_run
-    /// # use taskline::Task;
+    /// # use cronline::Task;
     /// # async fn example() {
     /// let task = Task::new(|| async { Ok(()) });
     /// // Start task execution in background
@@ -846,16 +846,16 @@ impl Task {
     /// # Returns
     ///
     /// Returns `Ok(())` if the task was successfully paused, or
-    /// `Err(TasklineError)` if the task is currently running.
+    /// `Err(CronlineError)` if the task is currently running.
     ///
     /// # Errors
     ///
-    /// Returns [`TasklineError::TaskExecutionError`] if the task is currently running.
+    /// Returns [`CronlineError::TaskExecutionError`] if the task is currently running.
     ///
     /// # Examples
     ///
     /// ```no_run
-    /// # use taskline::Task;
+    /// # use cronline::Task;
     /// # async fn example() {
     /// let task = Task::new(|| async { Ok(()) });
     /// task.pause().await.unwrap();
@@ -867,7 +867,7 @@ impl Task {
             *status = TaskStatus::Paused;
             Ok(())
         } else {
-            Err(TasklineError::TaskExecutionError(format!(
+            Err(CronlineError::TaskExecutionError(format!(
                 "Cannot pause task '{}' while it is running",
                 self.name
             )))
@@ -881,16 +881,16 @@ impl Task {
     /// # Returns
     ///
     /// Returns `Ok(())` if the task was successfully resumed, or
-    /// `Err(TasklineError)` if the task is not paused.
+    /// `Err(CronlineError)` if the task is not paused.
     ///
     /// # Errors
     ///
-    /// Returns [`TasklineError::TaskExecutionError`] if the task is not paused.
+    /// Returns [`CronlineError::TaskExecutionError`] if the task is not paused.
     ///
     /// # Examples
     ///
     /// ```no_run
-    /// # use taskline::Task;
+    /// # use cronline::Task;
     /// # async fn example() {
     /// let task = Task::new(|| async { Ok(()) });
     /// task.pause().await.unwrap();
@@ -904,7 +904,7 @@ impl Task {
             *status = TaskStatus::Idle;
             Ok(())
         } else {
-            Err(TasklineError::TaskExecutionError(format!(
+            Err(CronlineError::TaskExecutionError(format!(
                 "Cannot resume task '{}' as it is not paused",
                 self.name
             )))
@@ -930,7 +930,7 @@ impl Task {
     /// # Examples
     ///
     /// ```
-    /// use taskline::Task;
+    /// use cronline::Task;
     ///
     /// let task = Task::new(|| async { Ok(()) })
     ///     .with_name("My Task");
@@ -995,7 +995,7 @@ mod tests {
     #[tokio::test]
     async fn test_task_execution_failure() {
         let task = Task::new(|| async {
-            Err(TasklineError::TaskExecutionError(
+            Err(CronlineError::TaskExecutionError(
                 "intentional failure".to_string(),
             ))
         });
@@ -1019,7 +1019,7 @@ mod tests {
             async move {
                 let count = counter.fetch_add(1, Ordering::SeqCst);
                 if count < 2 {
-                    Err(TasklineError::TaskExecutionError("retry me".to_string()))
+                    Err(CronlineError::TaskExecutionError("retry me".to_string()))
                 } else {
                     Ok(())
                 }
@@ -1053,7 +1053,7 @@ mod tests {
         let result = task.execute().await;
         assert!(result.is_err());
 
-        if let Err(TasklineError::TaskTimeout(msg)) = result {
+        if let Err(CronlineError::TaskTimeout(msg)) = result {
             assert!(msg.contains("timed out"));
         } else {
             panic!("Expected TaskTimeout error");

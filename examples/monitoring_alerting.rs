@@ -18,7 +18,7 @@ use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
-use taskline::{Scheduler, SchedulerEvent, Task};
+use cronline::{Scheduler, SchedulerEvent, Task};
 use tokio::sync::RwLock;
 
 #[derive(Clone)]

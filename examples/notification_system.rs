@@ -18,7 +18,7 @@ use chrono::{DateTime, Utc};
 use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::Duration;
-use taskline::{Scheduler, SchedulerEvent, Task, TaskConfig};
+use cronline::{Scheduler, SchedulerEvent, Task, TaskConfig};
 use tokio::sync::RwLock;
 
 #[derive(Clone)]
@@ -327,7 +327,7 @@ async fn setup_notification_tasks(
             email
                 .send_digest("user@example.com", digest_items)
                 .await
-                .map_err(|e| taskline::TasklineError::TaskExecutionError(e))
+                .map_err(|e| cronline::CronlineError::TaskExecutionError(e))
         }
     })
     .with_schedule("0 8 * * *")?
@@ -347,7 +347,7 @@ async fn setup_notification_tasks(
             let body = "Your weekly summary:\n\n- Total activities: 42\n- Goals completed: 8\n- Time saved: 3 hours";
 
             email.send_email("manager@example.com", subject, body).await
-                .map_err(|e| taskline::TasklineError::TaskExecutionError(e))
+                .map_err(|e| cronline::CronlineError::TaskExecutionError(e))
         }
     })
     .with_schedule("0 9 * * 1")?  // Monday at 9 AM
@@ -373,7 +373,7 @@ async fn setup_notification_tasks(
                         "You have a meeting in 30 minutes",
                     )
                     .await
-                    .map_err(|e| taskline::TasklineError::TaskExecutionError(e))?;
+                    .map_err(|e| cronline::CronlineError::TaskExecutionError(e))?;
             }
 
             Ok(())
@@ -393,7 +393,7 @@ async fn setup_notification_tasks(
             queue
                 .process_queue(5)
                 .await
-                .map_err(|e| taskline::TasklineError::TaskExecutionError(e))?;
+                .map_err(|e| cronline::CronlineError::TaskExecutionError(e))?;
             Ok(())
         }
     })
@@ -423,7 +423,7 @@ async fn setup_notification_tasks(
                     "Don't miss our exclusive weekly deals...",
                 )
                 .await
-                .map_err(|e| taskline::TasklineError::TaskExecutionError(e))?;
+                .map_err(|e| cronline::CronlineError::TaskExecutionError(e))?;
 
             Ok(())
         }
@@ -457,7 +457,7 @@ async fn setup_notification_tasks(
                         "You left items in your cart. Complete your purchase now!",
                     )
                     .await
-                    .map_err(|e| taskline::TasklineError::TaskExecutionError(e))?;
+                    .map_err(|e| cronline::CronlineError::TaskExecutionError(e))?;
             }
 
             Ok(())

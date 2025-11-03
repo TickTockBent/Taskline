@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
-use taskline::{Scheduler, SchedulerEvent, Task, TaskConfig};
+use cronline::{Scheduler, SchedulerEvent, Task, TaskConfig};
 use tokio::sync::RwLock;
 
 #[derive(Clone)]
@@ -324,7 +324,7 @@ async fn setup_polling_tasks(system: &ScraperSystem) -> Result<(), Box<dyn std::
             for city in cities {
                 ds.fetch_weather(city)
                     .await
-                    .map_err(|e| taskline::TasklineError::TaskExecutionError(e))?;
+                    .map_err(|e| cronline::CronlineError::TaskExecutionError(e))?;
             }
 
             Ok(())
@@ -355,7 +355,7 @@ async fn setup_polling_tasks(system: &ScraperSystem) -> Result<(), Box<dyn std::
             for symbol in symbols {
                 ds.fetch_stock_price(symbol)
                     .await
-                    .map_err(|e| taskline::TasklineError::TaskExecutionError(e))?;
+                    .map_err(|e| cronline::CronlineError::TaskExecutionError(e))?;
             }
 
             Ok(())
@@ -381,7 +381,7 @@ async fn setup_polling_tasks(system: &ScraperSystem) -> Result<(), Box<dyn std::
             for feed in feeds {
                 ds.fetch_rss_feed(feed)
                     .await
-                    .map_err(|e| taskline::TasklineError::TaskExecutionError(e))?;
+                    .map_err(|e| cronline::CronlineError::TaskExecutionError(e))?;
             }
 
             Ok(())
@@ -411,7 +411,7 @@ async fn setup_polling_tasks(system: &ScraperSystem) -> Result<(), Box<dyn std::
             for product in products {
                 ds.check_product_price(product)
                     .await
-                    .map_err(|e| taskline::TasklineError::TaskExecutionError(e))?;
+                    .map_err(|e| cronline::CronlineError::TaskExecutionError(e))?;
                 tokio::time::sleep(Duration::from_millis(500)).await; // Be nice
             }
 
