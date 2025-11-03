@@ -1,6 +1,6 @@
-//! # Taskline: Lightweight Task Scheduling for Rust
+//! # Cronline: Lightweight Task Scheduling for Rust
 //!
-//! Taskline is a minimalist yet powerful cron-style task scheduler built with Rust.
+//! Cronline is a minimalist yet powerful cron-style task scheduler built with Rust.
 //! Designed for simplicity, performance, and ease of integration, it enables developers
 //! to effortlessly manage scheduled asynchronous tasks within Rust applications.
 //!
@@ -21,18 +21,18 @@
 //!
 //! ## Quick Start
 //!
-//! Add Taskline to your `Cargo.toml`:
+//! Add Cronline to your `Cargo.toml`:
 //!
 //! ```toml
 //! [dependencies]
-//! taskline = "0.2.1"
+//! cronline = "0.2.1"
 //! tokio = { version = "1", features = ["full"] }
 //! ```
 //!
 //! ## Basic Example
 //!
 //! ```no_run
-//! use taskline::{Scheduler, Task};
+//! use cronline::{Scheduler, Task};
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -61,7 +61,7 @@
 //! ## Advanced Usage
 //!
 //! ```no_run
-//! use taskline::{Scheduler, Task, TaskConfig, SchedulerConfig};
+//! use cronline::{Scheduler, Task, TaskConfig, SchedulerConfig};
 //! use std::time::Duration;
 //!
 //! #[tokio::main]
@@ -118,7 +118,7 @@
 //!
 //! ## Cron Expression Syntax
 //!
-//! Taskline uses standard cron syntax: `* * * * *` (minute, hour, day of month, month, day of week)
+//! Cronline uses standard cron syntax: `* * * * *` (minute, hour, day of month, month, day of week)
 //!
 //! Examples:
 //! - `* * * * *` - Every minute

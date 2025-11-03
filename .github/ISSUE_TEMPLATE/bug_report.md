@@ -33,7 +33,7 @@ A clear and concise description of what actually happened.
 
 ## Environment
 
-- Taskline version: [e.g., 0.2.1]
+- Cronline version: [e.g., 0.2.1]
 - Rust version: [e.g., 1.75.0]
 - OS: [e.g., Ubuntu 22.04, macOS 14, Windows 11]
 - Tokio version: [if relevant]

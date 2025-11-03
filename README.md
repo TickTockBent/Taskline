@@ -1,16 +1,16 @@
-# Taskline
+# Cronline
 
-Taskline is a minimalist yet powerful cron-style task scheduler built with Rust. Designed for simplicity, performance, and ease of integration, Taskline enables developers to effortlessly manage scheduled asynchronous tasks within Rust applications.
+Cronline is a minimalist yet powerful cron-style task scheduler built with Rust. Designed for simplicity, performance, and ease of integration, Cronline enables developers to effortlessly manage scheduled asynchronous tasks within Rust applications.
 
-[![CI](https://github.com/ticktockbent/taskline/workflows/CI/badge.svg)](https://github.com/yourusername/taskline/actions)
+[![CI](https://github.com/ticktockbent/taskline/workflows/CI/badge.svg)](https://github.com/ticktockbent/taskline/actions)
 [![Coverage](https://codecov.io/gh/ticktockbent/taskline/branch/main/graph/badge.svg)](https://codecov.io/gh/ticktockbent/taskline)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Crates.io](https://img.shields.io/crates/v/taskline.svg)](https://crates.io/crates/taskline)
-[![Documentation](https://docs.rs/taskline/badge.svg)](https://docs.rs/taskline)
+[![Crates.io](https://img.shields.io/crates/v/cronline.svg)](https://crates.io/crates/cronline)
+[![Documentation](https://docs.rs/cronline/badge.svg)](https://docs.rs/cronline)
 
 ## Purpose
 
-Taskline addresses the common need among Rust developers for reliable task scheduling without the overhead of external cron utilities or complex frameworks. It's ideal for:
+Cronline addresses the common need among Rust developers for reliable task scheduling without the overhead of external cron utilities or complex frameworks. It's ideal for:
 
 - Web services
 - Automation tools
@@ -34,17 +34,17 @@ Taskline addresses the common need among Rust developers for reliable task sched
 
 ## Installation
 
-Add Taskline to your Cargo.toml:
+Add Cronline to your Cargo.toml:
 
 ```toml
 [dependencies]
-taskline = "0.2.1"
+cronline = "0.2.1"
 ```
 
 ## Basic Usage
 
 ```rust
-use taskline::{Scheduler, Task};
+use cronline::{Scheduler, Task};
 use tokio;
 
 #[tokio::main]
@@ -67,7 +67,7 @@ async fn main() {
 ## Advanced Usage
 
 ```rust
-use taskline::{Scheduler, Task, TaskConfig, SchedulerConfig};
+use cronline::{Scheduler, Task, TaskConfig, SchedulerConfig};
 use std::time::Duration;
 
 #[tokio::main]
@@ -215,7 +215,7 @@ scheduler.remove(&task_id).unwrap();
 
 ## Cron Expression Syntax
 
-Taskline uses standard cron syntax: `* * * * *` (minute, hour, day of month, month, day of week)
+Cronline uses standard cron syntax: `* * * * *` (minute, hour, day of month, month, day of week)
 
 Examples:
 - `* * * * *` - Every minute
@@ -226,7 +226,7 @@ Examples:
 
 ## Real-World Examples
 
-Taskline includes comprehensive real-world examples demonstrating production patterns:
+Cronline includes comprehensive real-world examples demonstrating production patterns:
 
 - **[Web Integration](examples/web_integration_axum.rs)** - Axum web framework integration with background tasks
 - **[Monitoring & Alerting](examples/monitoring_alerting.rs)** - System monitoring with threshold-based alerts
