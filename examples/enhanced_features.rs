@@ -14,10 +14,10 @@
 //! - Task cancellation
 //! - Auto-generated task names
 
+use cronline::{Scheduler, SchedulerEvent, Task};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
-use cronline::{Scheduler, SchedulerEvent, Task};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

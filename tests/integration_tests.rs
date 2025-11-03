@@ -1,7 +1,7 @@
+use cronline::{Scheduler, SchedulerConfig, Task, TaskConfig};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
-use cronline::{Scheduler, SchedulerConfig, Task, TaskConfig};
 
 #[tokio::test]
 async fn test_full_scheduler_lifecycle() {

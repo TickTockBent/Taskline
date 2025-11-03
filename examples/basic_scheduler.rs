@@ -7,9 +7,9 @@
 
 // use env_logger::Builder;
 // use log::LevelFilter;
+use cronline::{Scheduler, Task};
 use log::info;
 use std::error::Error;
-use cronline::{Scheduler, Task};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {

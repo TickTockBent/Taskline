@@ -15,11 +15,11 @@
 //! - Feed aggregation
 
 use chrono::{DateTime, Utc};
+use cronline::{Scheduler, SchedulerEvent, Task, TaskConfig};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
-use cronline::{Scheduler, SchedulerEvent, Task, TaskConfig};
 use tokio::sync::RwLock;
 
 #[derive(Clone)]

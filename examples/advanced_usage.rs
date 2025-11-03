@@ -7,11 +7,11 @@
 
 // use env_logger::Builder;
 // use log::LevelFilter;
+use cronline::{Result as CronlineResult, Scheduler, SchedulerConfig, Task, TaskConfig};
 use log::{error, info, warn};
 use std::error::Error;
 use std::sync::Arc;
 use std::time::Duration;
-use cronline::{Result as CronlineResult, Scheduler, SchedulerConfig, Task, TaskConfig};
 use tokio::sync::Mutex;
 
 // A shared counter to demonstrate task state sharing

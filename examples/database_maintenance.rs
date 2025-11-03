@@ -15,9 +15,9 @@
 //! - Statistics updates
 
 use chrono::{DateTime, Utc};
+use cronline::{Scheduler, SchedulerEvent, Task, TaskConfig};
 use std::sync::Arc;
 use std::time::Duration;
-use cronline::{Scheduler, SchedulerEvent, Task, TaskConfig};
 use tokio::sync::RwLock;
 
 #[derive(Clone)]

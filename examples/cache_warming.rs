@@ -15,10 +15,10 @@
 //! - Predictive cache preloading
 
 use chrono::{DateTime, Utc};
+use cronline::{Scheduler, SchedulerEvent, Task};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
-use cronline::{Scheduler, SchedulerEvent, Task};
 use tokio::sync::RwLock;
 
 #[derive(Clone)]
