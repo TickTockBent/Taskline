@@ -1,0 +1,118 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Cronline: Lightweight Task Scheduling for Rust"><title>cronline - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-e56847b5.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="cronline" data-themes="" data-resource-suffix="" data-rustdoc-version="1.91.0 (f8297e351 2025-10-28)" data-channel="1.91.0" data-search-js="search-e256b49e.js" data-stringdex-js="stringdex-c3e638e9.js" data-settings-js="settings-c38705f0.js" ><script src="../static.files/storage-e2aeef58.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-6dc2a7f3.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Crate cronline</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../cronline/index.html">cronline</a><span class="version">0.2.1</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#cronline-lightweight-task-scheduling-for-rust" title="Cronline: Lightweight Task Scheduling for Rust">Cronline: Lightweight Task Scheduling for Rust</a><ul><li><a href="#features" title="Features">Features</a></li><li><a href="#quick-start" title="Quick Start">Quick Start</a></li><li><a href="#basic-example" title="Basic Example">Basic Example</a></li><li><a href="#advanced-usage" title="Advanced Usage">Advanced Usage</a></li><li><a href="#cron-expression-syntax" title="Cron Expression Syntax">Cron Expression Syntax</a></li><li><a href="#main-components" title="Main Components">Main Components</a></li></ul></li></ul><h3><a href="#reexports">Crate Items</a></h3><ul class="block"><li><a href="#reexports" title="Re-exports">Re-exports</a></li><li><a href="#modules" title="Modules">Modules</a></li><li><a href="#constants" title="Constants">Constants</a></li><li><a href="#types" title="Type Aliases">Type Aliases</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content"><div class="main-heading"><h1>Crate <span>cronline</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/cronline/lib.rs.html#1-168">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="cronline-lightweight-task-scheduling-for-rust"><a class="doc-anchor" href="#cronline-lightweight-task-scheduling-for-rust">§</a>Cronline: Lightweight Task Scheduling for Rust</h2>
+<p>Cronline is a minimalist yet powerful cron-style task scheduler built with Rust.
+Designed for simplicity, performance, and ease of integration, it enables developers
+to effortlessly manage scheduled asynchronous tasks within Rust applications.</p>
+<h3 id="features"><a class="doc-anchor" href="#features">§</a>Features</h3>
+<ul>
+<li><strong>Cron-like Scheduling</strong>: Intuitive scheduling using standard cron syntax</li>
+<li><strong>Interval-based Scheduling</strong>: Simple interval-based task execution</li>
+<li><strong>Async-Await Native</strong>: First-class async task support leveraging Tokio</li>
+<li><strong>Robust Error Handling</strong>: Configurable retries and timeout handling</li>
+<li><strong>Task Statistics</strong>: Built-in execution tracking and metrics</li>
+<li><strong>Pause/Resume</strong>: Dynamic task control without stopping the scheduler</li>
+<li><strong>Task Tags/Labels</strong>: Organize and filter tasks using tags</li>
+<li><strong>Graceful Cancellation</strong>: Cancel running tasks cleanly</li>
+<li><strong>Timeout Warnings</strong>: Get warned at 80% of timeout duration</li>
+<li><strong>Event Bus</strong>: Subscribe to scheduler and task lifecycle events</li>
+<li><strong>Auto-generated Names</strong>: Meaningful task names from cron expressions</li>
+<li><strong>Thread-Safe</strong>: All components are safe to share across threads</li>
+</ul>
+<h3 id="quick-start"><a class="doc-anchor" href="#quick-start">§</a>Quick Start</h3>
+<p>Add Cronline to your <code>Cargo.toml</code>:</p>
+<div class="example-wrap"><pre class="language-toml"><code>[dependencies]
+cronline = &quot;0.2.1&quot;
+tokio = { version = &quot;1&quot;, features = [&quot;full&quot;] }</code></pre></div><h3 id="basic-example"><a class="doc-anchor" href="#basic-example">§</a>Basic Example</h3>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>cronline::{Scheduler, Task};
+
+<span class="attr">#[tokio::main]
+</span><span class="kw">async fn </span>main() -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
+    <span class="comment">// Create a new scheduler
+    </span><span class="kw">let </span>scheduler = Scheduler::new();
+
+    <span class="comment">// Add a task that runs every hour at minute 0
+    </span>scheduler.add(<span class="string">"0 * * * *"</span>, Task::new(|| <span class="kw">async </span>{
+        <span class="macro">println!</span>(<span class="string">"Running hourly task!"</span>);
+        <span class="prelude-val">Ok</span>(())
+    }).with_name(<span class="string">"Hourly Task"</span>)).<span class="kw">await</span><span class="question-mark">?</span>;
+
+    <span class="comment">// Start the scheduler
+    </span>scheduler.start().<span class="kw">await</span><span class="question-mark">?</span>;
+
+    <span class="comment">// Let it run for a while
+    </span>tokio::time::sleep(tokio::time::Duration::from_secs(<span class="number">3600</span>)).<span class="kw">await</span>;
+
+    <span class="comment">// Stop the scheduler gracefully
+    </span>scheduler.stop().<span class="kw">await</span><span class="question-mark">?</span>;
+
+    <span class="prelude-val">Ok</span>(())
+}</code></pre></div><h3 id="advanced-usage"><a class="doc-anchor" href="#advanced-usage">§</a>Advanced Usage</h3>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>cronline::{Scheduler, Task, TaskConfig, SchedulerConfig};
+<span class="kw">use </span>std::time::Duration;
+
+<span class="attr">#[tokio::main]
+</span><span class="kw">async fn </span>main() -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
+    <span class="comment">// Create scheduler with custom configuration
+    </span><span class="kw">let </span>scheduler = Scheduler::with_config(SchedulerConfig {
+        check_interval: Duration::from_millis(<span class="number">100</span>),
+        continue_on_error: <span class="bool-val">true</span>,
+        shutdown_grace_period: Duration::from_secs(<span class="number">10</span>),
+    });
+
+    <span class="comment">// Subscribe to events
+    </span><span class="kw">let </span><span class="kw-2">mut </span>events = scheduler.event_bus().subscribe();
+    tokio::spawn(<span class="kw">async move </span>{
+        <span class="kw">while let </span><span class="prelude-val">Ok</span>(event) = events.recv().<span class="kw">await </span>{
+            <span class="macro">println!</span>(<span class="string">"Event: {:?}"</span>, event);
+        }
+    });
+
+    <span class="comment">// Add task with custom configuration
+    </span>scheduler.add(<span class="string">"*/5 * * * *"</span>, Task::new(|| <span class="kw">async </span>{
+        <span class="comment">// Your task logic here
+        </span><span class="prelude-val">Ok</span>(())
+    })
+    .with_name(<span class="string">"Custom Task"</span>)
+    .with_tags(<span class="kw-2">&amp;</span>[<span class="string">"backup"</span>, <span class="string">"critical"</span>])
+    .with_config(TaskConfig {
+        timeout: <span class="prelude-val">Some</span>(Duration::from_secs(<span class="number">30</span>)),
+        max_retries: <span class="number">3</span>,
+        retry_delay: Duration::from_secs(<span class="number">5</span>),
+        fail_scheduler_on_error: <span class="bool-val">false</span>,
+    })).<span class="kw">await</span><span class="question-mark">?</span>;
+
+    <span class="comment">// Add interval-based task
+    </span>scheduler.add_task(Task::new(|| <span class="kw">async </span>{
+        <span class="macro">println!</span>(<span class="string">"Running every 5 minutes!"</span>);
+        <span class="prelude-val">Ok</span>(())
+    })
+    .with_interval(Duration::from_secs(<span class="number">300</span>))
+    .with_tag(<span class="string">"monitoring"</span>)).<span class="kw">await</span><span class="question-mark">?</span>;
+
+    scheduler.start().<span class="kw">await</span><span class="question-mark">?</span>;
+
+    <span class="comment">// Filter tasks by tag
+    </span><span class="kw">let </span>critical_tasks = scheduler.tasks_with_tag(<span class="string">"critical"</span>).<span class="kw">await</span>;
+    <span class="macro">println!</span>(<span class="string">"Found {} critical tasks"</span>, critical_tasks.len());
+
+    <span class="comment">// Do other work...
+
+    </span>scheduler.stop().<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(())
+}</code></pre></div><h3 id="cron-expression-syntax"><a class="doc-anchor" href="#cron-expression-syntax">§</a>Cron Expression Syntax</h3>
+<p>Cronline uses standard cron syntax: <code>* * * * *</code> (minute, hour, day of month, month, day of week)</p>
+<p>Examples:</p>
+<ul>
+<li><code>* * * * *</code> - Every minute</li>
+<li><code>0 * * * *</code> - Every hour at minute 0</li>
+<li><code>0 0 * * *</code> - Every day at midnight</li>
+<li><code>0 12 * * MON-FRI</code> - Weekdays at noon</li>
+<li><code>*/15 * * * *</code> - Every 15 minutes</li>
+</ul>
+<h3 id="main-components"><a class="doc-anchor" href="#main-components">§</a>Main Components</h3>
+<ul>
+<li><a href="scheduler/struct.Scheduler.html" title="struct cronline::scheduler::Scheduler"><code>Scheduler</code></a> - Manages and executes tasks on a schedule</li>
+<li><a href="task/struct.Task.html" title="struct cronline::task::Task"><code>Task</code></a> - Represents a schedulable asynchronous task</li>
+<li><a href="errors/enum.CronlineError.html" title="enum cronline::errors::CronlineError"><code>CronlineError</code></a> - Error types for the library</li>
+<li><a href="type.Result.html" title="type cronline::Result"><code>Result</code></a> - Convenient result type alias</li>
+</ul>
+</div></details><h2 id="reexports" class="section-header">Re-exports<a href="#reexports" class="anchor">§</a></h2><dl class="item-table reexports"><dt id="reexport.CronlineError"><code>pub use crate::errors::<a class="enum" href="errors/enum.CronlineError.html" title="enum cronline::errors::CronlineError">CronlineError</a>;</code></dt><dt id="reexport.EventBus"><code>pub use crate::events::<a class="struct" href="events/struct.EventBus.html" title="struct cronline::events::EventBus">EventBus</a>;</code></dt><dt id="reexport.SchedulerEvent"><code>pub use crate::events::<a class="enum" href="events/enum.SchedulerEvent.html" title="enum cronline::events::SchedulerEvent">SchedulerEvent</a>;</code></dt><dt id="reexport.Scheduler"><code>pub use crate::scheduler::<a class="struct" href="scheduler/struct.Scheduler.html" title="struct cronline::scheduler::Scheduler">Scheduler</a>;</code></dt><dt id="reexport.SchedulerConfig"><code>pub use crate::scheduler::<a class="struct" href="scheduler/struct.SchedulerConfig.html" title="struct cronline::scheduler::SchedulerConfig">SchedulerConfig</a>;</code></dt><dt id="reexport.ScheduleType"><code>pub use crate::task::<a class="enum" href="task/enum.ScheduleType.html" title="enum cronline::task::ScheduleType">ScheduleType</a>;</code></dt><dt id="reexport.Task"><code>pub use crate::task::<a class="struct" href="task/struct.Task.html" title="struct cronline::task::Task">Task</a>;</code></dt><dt id="reexport.TaskConfig"><code>pub use crate::task::<a class="struct" href="task/struct.TaskConfig.html" title="struct cronline::task::TaskConfig">TaskConfig</a>;</code></dt><dt id="reexport.TaskStats"><code>pub use crate::task::<a class="struct" href="task/struct.TaskStats.html" title="struct cronline::task::TaskStats">TaskStats</a>;</code></dt><dt id="reexport.TaskStatus"><code>pub use crate::task::<a class="enum" href="task/enum.TaskStatus.html" title="enum cronline::task::TaskStatus">TaskStatus</a>;</code></dt></dl><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><dl class="item-table"><dt><a class="mod" href="errors/index.html" title="mod cronline::errors">errors</a></dt><dd>Error types for Cronline operations.</dd><dt><a class="mod" href="events/index.html" title="mod cronline::events">events</a></dt><dd>Event system for task and scheduler events.</dd><dt><a class="mod" href="scheduler/index.html" title="mod cronline::scheduler">scheduler</a></dt><dd>Scheduler for managing and executing tasks.</dd><dt><a class="mod" href="task/index.html" title="mod cronline::task">task</a></dt><dd>Task management and execution.</dd></dl><h2 id="constants" class="section-header">Constants<a href="#constants" class="anchor">§</a></h2><dl class="item-table"><dt><a class="constant" href="constant.VERSION.html" title="constant cronline::VERSION">VERSION</a></dt><dd>The version of the Cronline library.</dd></dl><h2 id="types" class="section-header">Type Aliases<a href="#types" class="anchor">§</a></h2><dl class="item-table"><dt><a class="type" href="type.Result.html" title="type cronline::Result">Result</a></dt><dd>Convenient result type alias for Cronline operations.</dd></dl><script type="text/json" id="notable-traits-data">{"&[u8]":"<h3>Notable traits for <code>&amp;[<a class=\"primitive\" href=\"https://doc.rust-lang.org/1.91.0/std/primitive.u8.html\">u8</a>]</code></h3><pre><code><div class=\"where\">impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.91.0/std/io/trait.Read.html\" title=\"trait std::io::Read\">Read</a> for &amp;[<a class=\"primitive\" href=\"https://doc.rust-lang.org/1.91.0/std/primitive.u8.html\">u8</a>]</div>"}</script></section></div></main></body></html>

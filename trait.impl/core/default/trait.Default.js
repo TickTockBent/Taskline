@@ -1,0 +1,9 @@
+(function() {
+    var implementors = Object.fromEntries([["cronline",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.91.0/core/default/trait.Default.html\" title=\"trait core::default::Default\">Default</a> for <a class=\"struct\" href=\"cronline/events/struct.EventBus.html\" title=\"struct cronline::events::EventBus\">EventBus</a>"],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.91.0/core/default/trait.Default.html\" title=\"trait core::default::Default\">Default</a> for <a class=\"struct\" href=\"cronline/scheduler/struct.Scheduler.html\" title=\"struct cronline::scheduler::Scheduler\">Scheduler</a>"],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.91.0/core/default/trait.Default.html\" title=\"trait core::default::Default\">Default</a> for <a class=\"struct\" href=\"cronline/scheduler/struct.SchedulerConfig.html\" title=\"struct cronline::scheduler::SchedulerConfig\">SchedulerConfig</a>"],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.91.0/core/default/trait.Default.html\" title=\"trait core::default::Default\">Default</a> for <a class=\"struct\" href=\"cronline/task/struct.TaskConfig.html\" title=\"struct cronline::task::TaskConfig\">TaskConfig</a>"],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.91.0/core/default/trait.Default.html\" title=\"trait core::default::Default\">Default</a> for <a class=\"struct\" href=\"cronline/task/struct.TaskStats.html\" title=\"struct cronline::task::TaskStats\">TaskStats</a>"]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":57,"fragment_lengths":[1451]}
