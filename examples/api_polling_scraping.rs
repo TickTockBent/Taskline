@@ -111,7 +111,7 @@ impl DataStore {
             city: city.to_string(),
             temperature: 15.0 + (rand::random::<f64>() * 20.0),
             conditions: vec!["Sunny", "Cloudy", "Rainy", "Partly Cloudy"]
-                [rand::random::<usize>() % 4]
+                [(rand::random::<u32>() % 4) as usize]
                 .to_string(),
             timestamp: Utc::now(),
         };
