@@ -25,7 +25,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! taskline = "0.1.0"
+//! taskline = "0.2.1"
 //! tokio = { version = "1", features = ["full"] }
 //! ```
 //!

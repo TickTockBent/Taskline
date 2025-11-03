@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2025-11-03
+
+### Changed
+- Updated dependency: `cron` from 0.12.0 to 0.15.0
+- Updated dependency: `rand` from 0.8.5 to 0.9.2 (dev-dependency)
+- Updated dependency: `thiserror` from 1.0.56 to 2.0.17
+- Fixed `rand::random::<usize>()` compatibility for rand 0.9 (now uses `u32` and casts to `usize`)
+
+### Infrastructure
+- Updated GitHub Actions: `actions/checkout` from v4 to v5
+- Updated GitHub Actions: `actions/upload-artifact` from v4 to v5
+- Updated GitHub Actions: `peaceiris/actions-gh-pages` from v3 to v4
+- Updated GitHub Actions: `softprops/action-gh-release` from v1 to v2
+- Fixed MSRV check to use `dtolnay/rust-toolchain@master` with explicit `toolchain: "1.75.0"`
+
 ## [0.2.0] - 2024-10-24
 
 ### Added
@@ -111,5 +126,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multiple scheduler support
 - Task status tracking (Idle, Running, Paused, Completed, Failed)
 
+[0.2.1]: https://github.com/TickTockBent/Taskline/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/TickTockBent/Taskline/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/TickTockBent/Taskline/releases/tag/v0.1.0

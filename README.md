@@ -38,7 +38,7 @@ Add Taskline to your Cargo.toml:
 
 ```toml
 [dependencies]
-taskline = "0.2.0"
+taskline = "0.2.1"
 ```
 
 ## Basic Usage
